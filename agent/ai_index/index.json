@@ -1,0 +1,26 @@
+{
+  "project": "dreamvoice",
+  "description": "DreamVoice — AI Voice Studio UI prototype (React + Vite + TS + Tailwind + shadcn/ui, dark SaaS theme, left sidebar nav)",
+  "routes": [
+    { "path": "/", "page": "Studio" },
+    { "path": "/my-voices", "page": "Myvoices" },
+    { "path": "/projects", "page": "Projects" },
+    { "path": "/settings", "page": "Settings" },
+    { "path": "*", "page": "NotFound" }
+  ],
+  "files": [
+    { "path": "src/App.tsx", "type": "router", "purpose": "Routes all pages inside Layout; single root route to Studio" },
+    { "path": "src/layout/Layout.tsx", "type": "layout", "purpose": "Full-screen flex layout with Sidebar + <main><Outlet /></main>" },
+    { "path": "src/layout/Navbar.tsx", "type": "navigation", "purpose": "Dark left sidebar: Studio/My Voices/Projects/Settings links + soon-items (Voice Changer, Dubbing, Transcripts, Subtitles, YouTube) + Usage/Help/Account footer" },
+    { "path": "src/pages/Studio.tsx", "type": "page", "purpose": "Studio dashboard: quick actions, recent projects, upload workspace, voice changer workspace with voice cards/settings sliders, processing state, result preview — mock simulated states" },
+    { "path": "src/pages/Myvoices.tsx", "type": "page", "purpose": "Voice library with cards (preview/use/edit/delete) and Create Voice dialog with rights confirmation checkbox gating creation" },
+    { "path": "src/pages/Projects.tsx", "type": "page", "purpose": "Kanban project board (Draft/Processing/Ready/Published) with search, duplicate, delete" },
+    { "path": "src/pages/Settings.tsx", "type": "page", "purpose": "Tabbed settings (Profile/Security/Preferences) with validation, toasts, preference toggles" },
+    { "path": "src/pages/NotFound.tsx", "type": "page", "purpose": "404 fallback" }
+  ],
+  "verification": {
+    "build": "passed (vite, 11.11s)",
+    "browser": "ok:true, mainW:560, navW:207, links:20, headings:12"
+  },
+  "mock_only": ["voice generation", "voice cloning", "dubbing", "transcripts", "subtitles", "youtube publish", "uploads"]
+}

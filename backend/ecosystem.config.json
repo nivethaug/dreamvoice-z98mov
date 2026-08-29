@@ -1,0 +1,25 @@
+{
+  "apps": [
+    {
+      "name": "dreamvoice-z98mov-backend",
+      "script": "/root/clawd-backend/scripts/backend-sandbox.sh",
+      "args": "/root/dreampilot/dreampilotvenv /workspaces/user_50/website/2027_dreamvoice_20260829_052856/backend 8017",
+      "cwd": "/workspaces/user_50/website/2027_dreamvoice_20260829_052856/backend",
+      "interpreter": "/bin/bash",
+      "instances": 1,
+      "exec_mode": "fork",
+      "watch": false,
+      "max_memory_restart": "900M",
+      "out_file": "/workspaces/user_50/website/2027_dreamvoice_20260829_052856/backend/logs/out.log",
+      "error_file": "/workspaces/user_50/website/2027_dreamvoice_20260829_052856/backend/logs/error.log",
+      "log_date_format": "YYYY-MM-DD HH:mm:ss",
+      "env": {
+        "PORT": "8017",
+        "BACKEND_HOST": "0.0.0.0",
+        "BACKEND_PORT": "8017",
+        "PROJECT_NAME": "dreamvoice-z98mov",
+        "DATABASE_URL": "postgresql://dreamvoice_z98mov_user:FKwBq0AmcrFcOiiFINbtbu9O3bg7axWE@localhost:5432/dreamvoice_z98mov_db"
+      }
+    }
+  ]
+}
