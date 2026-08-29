@@ -1,0 +1,21 @@
+{
+  "project_name": "dreamvoice",
+  "description": null,
+  "template_id": null,
+  "ports": {
+    "frontend": 3016,
+    "backend": 8017
+  },
+  "domains": {
+    "frontend": "dreamvoice-z98mov.dreamagent.cloud",
+    "backend": "dreamvoice-z98mov-api.dreamagent.cloud"
+  },
+  "dns": {},
+  "database": {
+    "name": "dreamvoice_z98mov_db",
+    "user": "dreamvoice_z98mov_user"
+  },
+  "service_name": "dreamvoice-z98mov-backend",
+  "status": "ready",
+  "frontend_app_name": "dreamvoice-z98mov-frontend"
+}
