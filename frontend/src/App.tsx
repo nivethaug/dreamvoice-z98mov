@@ -9,6 +9,8 @@ import Studio from "./pages/Studio";
 import Myvoices from "./pages/Myvoices";
 import Projects from "./pages/Projects";
 import Settings from "./pages/Settings";
+import NewProject from "./pages/NewProject";
+import VoiceChanger from "./pages/VoiceChanger";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,8 @@ const App = () => (
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Studio />} />
+              <Route path="/new-project" element={<NewProject />} />
+              <Route path="/voice-changer" element={<VoiceChanger />} />
               <Route path="/my-voices" element={<Myvoices />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/settings" element={<Settings />} />

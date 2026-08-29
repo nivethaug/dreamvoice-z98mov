@@ -87,8 +87,8 @@ const Studio = () => {
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-100 md:text-3xl">Voice Studio</h1>
           <p className="mt-1 text-sm text-zinc-400">Transform your recordings with AI voices.</p>
         </div>
-        <Button className="w-fit gap-2 bg-indigo-500 text-white hover:bg-indigo-400">
-          <Plus className="h-4 w-4" aria-hidden="true" /> New Project
+        <Button asChild className="w-fit gap-2 bg-indigo-500 text-white hover:bg-indigo-400" data-testid="studio-new-project-button">
+          <Link to="/new-project"><Plus className="h-4 w-4" aria-hidden="true" /> New Project</Link>
         </Button>
       </header>
 
@@ -106,7 +106,13 @@ const Studio = () => {
                   <CardTitle className="text-sm font-semibold text-zinc-100">{a.title}</CardTitle>
                   <p className="mt-1 text-xs leading-relaxed text-zinc-400">{a.desc}</p>
                 </div>
-                <Button variant="secondary" size="sm" className="mt-auto w-fit bg-white/10 text-zinc-200 hover:bg-white/15">{a.cta}</Button>
+                {a.title === "Change Voice" ? (
+                  <Button asChild variant="secondary" size="sm" className="mt-auto w-fit bg-white/10 text-zinc-200 hover:bg-white/15" data-testid="studio-change-voice-start-button">
+                    <Link to="/new-project">{a.cta}</Link>
+                  </Button>
+                ) : (
+                  <Button variant="secondary" size="sm" className="mt-auto w-fit bg-white/10 text-zinc-200 hover:bg-white/15">{a.cta}</Button>
+                )}
               </CardContent>
             </Card>
           ))}
