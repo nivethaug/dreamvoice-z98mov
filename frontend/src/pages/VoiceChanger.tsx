@@ -1,39 +1,576 @@
-import { Mic2, ArrowLeft, Sparkles, Info } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  ArrowLeft, Play, Pause, Volume2, Maximize2, Mic2, Search, Plus, CheckCircle2,
+  AlertTriangle, ChevronDown, RotateCcw, Download, Film, Music, Pencil, ArrowRight,
+  Loader2, X, SlidersHorizontal,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { projectStore, type ProjectMedia } from "@/lib/projectStore";
+
+const fmtTime = (s: number) => {
+  if (!isFinite(s) || s < 0) s = 0;
+  const m = Math.floor(s / 60), sec = Math.floor(s % 60), h = Math.floor(m / 60);
+  return h > 0 ? `${h}:${String(m % 60).padStart(2, "0")}:${String(sec).padStart(2, "0")}` : `${m}:${String(sec).padStart(2, "0")}`;
+};
+
+interface Voice {
+  id: string; name: string; desc: string; tags: string; language: string;
+  personal?: boolean; addedAt: number; initials: string; hue: number;
+}
+
+const VOICES: Voice[] = [
+  { id: "my-voice", name: "My Voice", desc: "Personal voice", tags: "Personal", language: "English", personal: true, addedAt: 5, initials: "MV", hue: 258 },
+  { id: "female-presenter", name: "Female Presenter", desc: "Warm · Clear · Conversational", tags: "Warm · Clear · Conversational", language: "English", addedAt: 4, initials: "FP", hue: 280 },
+  { id: "male-narrator", name: "Male Narrator", desc: "Deep · Professional", tags: "Deep · Professional", language: "English", addedAt: 3, initials: "MN", hue: 220 },
+  { id: "tamil-presenter", name: "Tamil Presenter", desc: "Natural · Expressive", tags: "Natural · Expressive", language: "Tamil", addedAt: 2, initials: "TP", hue: 160 },
+  { id: "hindi-presenter", name: "Hindi Presenter", desc: "Fluent · Engaging", tags: "Fluent · Engaging", language: "Hindi", addedAt: 1, initials: "HP", hue: 30 },
+];
+
+const FILTERS = ["All", "My Voices", "English", "Tamil", "Hindi", "Other"] as const;
+type Filter = (typeof FILTERS)[number];
+type Sort = "Recommended" | "Recently Added" | "Name";
+
+const DEFAULT_SETTINGS = { stability: 50, similarity: 75, style: 40, speed: 100, pitch: 50 };
+
+const PROCESS_STEPS = [
+  "Preparing media",
+  "Analyzing speech",
+  "Converting voice",
+  "Enhancing audio",
+  "Preparing final media",
+];
+
+type Phase = "setup" | "processing" | "complete";
 
 const VoiceChanger = () => {
   const navigate = useNavigate();
+  const media = projectStore.get().media as ProjectMedia | null;
+  const rightsConfirmed = projectStore.get().rights.confirmed;
+
+  const [phase, setPhase] = useState<Phase>("setup");
+  const [selectedVoice, setSelectedVoice] = useState<Voice | null>(null);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("All");
+  const [sort, setSort] = useState<Sort>("Recommended");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState({ ...DEFAULT_SETTINGS });
+  const [error, setError] = useState("");
+  const [toast, setToast] = useState<{ kind: "success" | "error"; msg: string } | null>(null);
+
+  const [progress, setProgress] = useState(0);
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const voices = useMemo(() => {
+    let list = VOICES.filter(v =>
+      v.name.toLowerCase().includes(query.toLowerCase()) ||
+      v.desc.toLowerCase().includes(query.toLowerCase()));
+    if (filter === "My Voices") list = list.filter(v => v.personal);
+    else if (filter === "Other") list = list.filter(v => !v.personal && !["English", "Tamil", "Hindi"].includes(v.language));
+    else if (filter !== "All") list = list.filter(v => v.language === filter);
+    if (sort === "Recently Added") list = [...list].sort((a, b) => b.addedAt - a.addedAt);
+    else if (sort === "Name") list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+    return list;
+  }, [query, filter, sort]);
+
+  const startProcessing = () => {
+    if (!media) { setError("No media selected. Please go back and upload a file."); return; }
+    if (!selectedVoice) { setError("Please select a target voice before generating."); setToast({ kind: "error", msg: "Please select a target voice before generating." }); return; }
+    setError("");
+    setProgress(0);
+    setPhase("processing");
+    timerRef.current = window.setInterval(() => {
+      setProgress(p => {
+        const next = p + 1.5 + Math.random() * 2.5;
+        return next >= 100 ? 100 : next;
+      });
+    }, 220);
+  };
+
+  useEffect(() => {
+    if (phase === "processing" && progress >= 100) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setPhase("complete");
+      setToast({ kind: "success", msg: "Voice conversion complete" });
+    }
+  }, [progress, phase]);
+
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+
+  const cancelProcessing = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setPhase("setup");
+    setProgress(0);
+    setToast({ kind: "error", msg: "Conversion cancelled" });
+  };
+
+  const activeStep = Math.min(PROCESS_STEPS.length - 1, Math.floor((progress / 100) * PROCESS_STEPS.length));
+
+  const bars = Array.from({ length: 72 }, (_, i) =>
+    25 + Math.abs(Math.sin(i * 0.63) * 35) + Math.abs(Math.sin(i * 0.19)) * 40);
+
   return (
-    <div className="mx-auto flex h-full w-full max-w-3xl items-center p-4 md:p-8" data-testid="voice-changer-page">
-      <Card className="w-full border-white/10 bg-white/[0.03]">
-        <CardContent className="flex flex-col items-center gap-5 p-10 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/30 to-purple-500/30 text-indigo-300">
-            <Mic2 className="h-7 w-7" aria-hidden="true" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Voice Changer</h1>
-            <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-400">
-              Your uploaded media is ready. Voice conversion tooling will be connected here in a
-              later step — target voice selection and conversion controls are coming soon.
-            </p>
-          </div>
-          <p className="flex items-center gap-2 rounded-lg border border-indigo-500/25 bg-indigo-500/[0.07] px-3 py-2 text-xs text-indigo-300">
-            <Info className="h-3.5 w-3.5" aria-hidden="true" /> Placeholder workspace — no processing yet.
-          </p>
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => navigate("/new-project")}
-              className="gap-2 bg-white/10 text-zinc-200 hover:bg-white/15" data-testid="voice-changer-back-button">
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to Upload
+    <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8" data-testid="voice-changer-page">
+      {toast && (
+        <div role="status" aria-live="polite"
+          className={`fixed right-4 top-4 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-xl backdrop-blur ${
+            toast.kind === "success" ? "border-emerald-500/30 bg-emerald-950/90 text-emerald-300" : "border-red-500/30 bg-red-950/90 text-red-300"}`}>
+          {toast.kind === "success" ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : <AlertTriangle className="h-4 w-4" aria-hidden="true" />}
+          {toast.msg}
+          <button aria-label="Dismiss notification" onClick={() => setToast(null)} className="ml-1 opacity-60 hover:opacity-100"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+        </div>
+      )}
+
+      {/* Header */}
+      <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100 md:text-3xl">Voice Changer</h1>
+          <p className="mt-1 text-sm text-zinc-400">Replace the original speaker's voice while preserving the recording.</p>
+        </div>
+        {phase !== "processing" && (
+          <Button variant="ghost" onClick={() => navigate("/new-project")}
+            data-testid="voice-changer-back-button"
+            className="w-fit gap-2 text-zinc-400 hover:text-zinc-200">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to Project
+          </Button>
+        )}
+      </header>
+
+      {/* No media state */}
+      {!media && phase !== "processing" && (
+        <Card className="border-red-500/25 bg-red-500/[0.04]" data-testid="voice-changer-no-media">
+          <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
+            <AlertTriangle className="h-8 w-8 text-red-400" aria-hidden="true" />
+            <p className="text-sm font-medium text-zinc-200">No media selected</p>
+            <p className="max-w-md text-xs text-zinc-500">You haven't uploaded a project yet. Go back and upload a video or audio file to start changing voices.</p>
+            <Button onClick={() => navigate("/new-project")} className="mt-1 gap-2 bg-indigo-500 text-white hover:bg-indigo-400">
+              <ArrowRight className="h-4 w-4" aria-hidden="true" /> Create a Project
             </Button>
-            <Button disabled className="gap-2 bg-indigo-500/40 text-zinc-300" data-testid="voice-changer-convert-button">
-              <Sparkles className="h-4 w-4" aria-hidden="true" /> Convert Voice (coming soon)
+          </CardContent>
+        </Card>
+      )}
+
+      {/* PROCESSING STATE */}
+      {phase === "processing" && (
+        <Card className="border-indigo-500/25 bg-white/[0.03]" data-testid="voice-changer-processing">
+          <CardContent className="flex flex-col items-center gap-6 p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-400" aria-hidden="true" />
+            <div>
+              <h2 className="text-xl font-semibold text-zinc-100">Creating your new voice track</h2>
+              <p className="mt-1 text-sm text-zinc-400">Using {selectedVoice?.name} · {fmtTime(media?.duration || 0)} of media</p>
+            </div>
+            <div className="flex h-16 w-full max-w-xl items-center justify-center gap-1" aria-hidden="true">
+              {bars.map((h, i) => (
+                <span key={i} className="w-1.5 rounded-full bg-indigo-400/70"
+                  style={{
+                    height: `${(h / 100) * (Math.abs(Math.sin(i * 0.5 + progress * 0.15)) * 0.7 + 0.3) * 64}px`,
+                    animation: `pulse 1.2s ${i * 0.04}s ease-in-out infinite alternate`,
+                  }} />
+              ))}
+            </div>
+            <div className="w-full max-w-xl">
+              <div className="mb-2 flex justify-between text-xs tabular-nums text-zinc-400">
+                <span>Progress</span><span>{Math.floor(progress)}%</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+            <ol className="w-full max-w-xl space-y-2 text-left text-sm" data-testid="voice-changer-processing-steps">
+              {PROCESS_STEPS.map((step, i) => {
+                const state = i < activeStep ? "done" : i === activeStep ? "current" : "pending";
+                return (
+                  <li key={step} className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${
+                    state === "done" ? "border-emerald-500/20 bg-emerald-500/[0.05] text-emerald-300"
+                    : state === "current" ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-200"
+                    : "border-white/5 bg-white/[0.02] text-zinc-500"}`}>
+                    {state === "done" ? <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      : state === "current" ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+                      : <span className="h-4 w-4 shrink-0 rounded-full border border-white/20" aria-hidden="true" />}
+                    {step}
+                  </li>
+                );
+              })}
+            </ol>
+            <Button variant="ghost" onClick={cancelProcessing}
+              data-testid="voice-changer-cancel-button"
+              className="gap-2 text-zinc-400 hover:text-red-400">Cancel</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* COMPLETED STATE */}
+      {phase === "complete" && media && selectedVoice && (
+        <section data-testid="voice-changer-complete" className="space-y-6">
+          <Card className="border-emerald-500/25 bg-emerald-500/[0.04]">
+            <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
+                  <CheckCircle2 className="h-6 w-6" aria-hidden="true" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-zinc-100">Voice conversion complete</h2>
+                  <p className="text-xs text-zinc-400">Your new voice track is ready.</p>
+                </div>
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => { setPhase("setup"); setProgress(0); }}
+                data-testid="voice-changer-edit-voice-button"
+                className="gap-1.5 bg-white/10 text-zinc-200 hover:bg-white/15">
+                <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Edit Voice
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Tabs defaultValue="new" data-testid="voice-changer-result-tabs">
+            <TabsList className="bg-white/5">
+              <TabsTrigger value="original" data-testid="voice-changer-tab-original">Original</TabsTrigger>
+              <TabsTrigger value="new" data-testid="voice-changer-tab-new">New Voice</TabsTrigger>
+            </TabsList>
+            <TabsContent value="original" className="mt-4"><MediaPlayer media={media} label="Original" mockConverted={false} /></TabsContent>
+            <TabsContent value="new" className="mt-4"><MediaPlayer media={media} label="New Voice" mockConverted /></TabsContent>
+          </Tabs>
+
+          <Card className="border-white/10 bg-white/[0.03]">
+            <CardContent className="grid gap-4 p-5 sm:grid-cols-3">
+              <div><p className="text-[11px] uppercase tracking-wide text-zinc-500">Voice</p><p className="mt-1 text-sm font-medium text-zinc-100">{selectedVoice.name}</p></div>
+              <div><p className="text-[11px] uppercase tracking-wide text-zinc-500">Duration</p><p className="mt-1 text-sm font-medium text-zinc-100">{fmtTime(media.duration)}</p></div>
+              <div><p className="text-[11px] uppercase tracking-wide text-zinc-500">Language</p><p className="mt-1 text-sm font-medium text-zinc-100">{media.language}</p></div>
+            </CardContent>
+          </Card>
+
+          <div className="flex flex-wrap gap-3">
+            <Button className="gap-2 bg-indigo-500 text-white hover:bg-indigo-400" data-testid="voice-changer-download-audio"
+              onClick={() => setToast({ kind: "success", msg: "Download Audio will be available when processing is connected." })}>
+              <Download className="h-4 w-4" aria-hidden="true" /> Download Audio
+            </Button>
+            <Button variant="secondary" className="gap-2 bg-white/10 text-zinc-200 hover:bg-white/15" data-testid="voice-changer-download-video"
+              onClick={() => setToast({ kind: "success", msg: "Download Video will be available when processing is connected." })}>
+              <Film className="h-4 w-4" aria-hidden="true" /> Download Video
+            </Button>
+            <Button variant="secondary" className="gap-2 bg-white/10 text-zinc-200 hover:bg-white/15" onClick={() => { setPhase("setup"); setProgress(0); }}>
+              <Pencil className="h-4 w-4" aria-hidden="true" /> Edit Voice
+            </Button>
+            <Button className="ml-auto gap-2 bg-indigo-500 text-white hover:bg-indigo-400" data-testid="voice-changer-continue-publish-button"
+              onClick={() => navigate("/publish")}>
+              Continue to Publish <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </section>
+      )}
+
+      {/* SETUP: two-column workspace */}
+      {media && phase === "setup" && (
+        <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
+          {/* LEFT column */}
+          <div className="space-y-6">
+            <MediaPlayer media={media} label="Source media" mockConverted={false} showMeta />
+
+            {/* Original Voice card */}
+            <Card className="border-white/10 bg-white/[0.03]" data-testid="voice-changer-original-voice">
+              <CardContent className="p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-zinc-100">Original Voice</h2>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[11px] text-zinc-400">Source voice</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-zinc-600/50 to-zinc-800/50 text-sm font-semibold text-zinc-300">OV</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-zinc-100">Original Voice</p>
+                    <p className="text-xs text-zinc-500">Detected speaker</p>
+                    <p className="mt-1 text-xs text-zinc-400">{media.language} · {fmtTime(media.duration)}</p>
+                  </div>
+                  <Button variant="secondary" size="sm" className="gap-1.5 bg-white/10 text-zinc-200 hover:bg-white/15"
+                    data-testid="voice-changer-preview-original-voice"
+                    onClick={() => setToast({ kind: "success", msg: "Playing original voice (preview)" })}>
+                    <Play className="h-3.5 w-3.5" aria-hidden="true" /> Preview
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Before / After */}
+            <Card className="border-white/10 bg-white/[0.03]" data-testid="voice-changer-compare">
+              <CardContent className="p-5">
+                <h2 className="mb-4 text-sm font-semibold text-zinc-100">Original Voice <span className="mx-1 text-zinc-600">|</span> New Voice</h2>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Button variant="secondary" className="gap-2 bg-white/10 text-zinc-200 hover:bg-white/15"
+                    data-testid="voice-changer-compare-original"
+                    onClick={() => setToast({ kind: "success", msg: "Playing original voice" })}>
+                    ▶ Original
+                  </Button>
+                  <Button variant="secondary" disabled={!selectedVoice}
+                    className="gap-2 bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 disabled:opacity-40"
+                    data-testid="voice-changer-compare-new"
+                    title={selectedVoice ? undefined : "Select a target voice first"}
+                    onClick={() => selectedVoice
+                      ? setToast({ kind: "success", msg: `Preview of ${selectedVoice.name} will play once conversion is connected.` })
+                      : setToast({ kind: "error", msg: "Preview unavailable — select a target voice first." })}>
+                    ▶ New Voice
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Rights notice (read-only after confirmation) */}
+            <Card className="border-amber-500/25 bg-amber-500/[0.06]" data-testid="voice-changer-rights-section">
+              <CardContent className="p-5">
+                <div className="flex gap-3">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
+                  <div>
+                    <p className="text-xs font-semibold text-amber-300">⚠️ Voice Rights Notice</p>
+                    <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+                      Only upload or clone voices you own or have explicit permission to use. You are solely responsible for
+                      voice licensing, consent, and compliance with applicable laws and third-party rights. DreamAgent does
+                      not verify voice ownership or authorization.
+                    </p>
+                    {rightsConfirmed && (
+                      <p className="mt-2 flex items-center gap-1 text-[11px] text-emerald-400">
+                        <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Rights confirmed during project creation.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* RIGHT column */}
+          <div className="space-y-6">
+            {/* Target Voice */}
+            <Card className="border-white/10 bg-white/[0.03]" data-testid="voice-changer-target-voice">
+              <CardContent className="p-5">
+                <h2 className="text-sm font-semibold text-zinc-100">Target Voice</h2>
+                <p className="mt-0.5 text-xs text-zinc-500">Choose the voice you want to use.</p>
+
+                <div className="relative mt-4">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+                  <input type="text" placeholder="Search voices" aria-label="Search voices" data-testid="voice-changer-search-input"
+                    value={query} onChange={e => setQuery(e.target.value)}
+                    className="w-full rounded-lg border border-white/10 bg-white/[0.04] py-2 pl-9 pr-3 text-sm text-zinc-200 placeholder-zinc-500 outline-none focus:border-indigo-500/50" />
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Voice filters" data-testid="voice-changer-filters">
+                  {FILTERS.map(f => (
+                    <button key={f} type="button" aria-pressed={filter === f}
+                      data-testid={`voice-changer-filter-${f.toLowerCase().replace(/\s+/g, "-")}`}
+                      onClick={() => setFilter(f)}
+                      className={`rounded-full border px-3 py-1 text-[11px] transition-colors ${
+                        filter === f ? "border-indigo-500/60 bg-indigo-500/15 text-indigo-200" : "border-white/10 bg-white/[0.03] text-zinc-400 hover:text-zinc-200"}`}>
+                      {f}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <label htmlFor="voice-sort" className="text-[11px] text-zinc-500">Sort by</label>
+                  <select id="voice-sort" aria-label="Sort voices" data-testid="voice-changer-sort-select"
+                    value={sort} onChange={e => setSort(e.target.value as Sort)}
+                    className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-zinc-300 outline-none focus:border-indigo-500/50">
+                    <option>Recommended</option><option>Recently Added</option><option>Name</option>
+                  </select>
+                </div>
+
+                <div className="mt-4 space-y-3" data-testid="voice-changer-voice-list">
+                  {voices.length === 0 && (
+                    <p className="rounded-lg border border-white/10 bg-white/[0.02] p-4 text-center text-xs text-zinc-500">No voices match your search.</p>
+                  )}
+                  {voices.map(v => {
+                    const selected = selectedVoice?.id === v.id;
+                    return (
+                      <div key={v.id} role="radio" aria-checked={selected}
+                        data-testid={`voice-changer-voice-${v.id}`}
+                        className={`rounded-xl border p-3 transition-all ${
+                          selected ? "border-indigo-500/60 bg-indigo-500/10 shadow-lg shadow-indigo-950/40" : "border-white/10 bg-white/[0.02] hover:border-indigo-500/30"}`}>
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+                            style={{ background: `linear-gradient(135deg, hsl(${v.hue} 70% 55%), hsl(${v.hue + 30} 70% 45%))` }}>
+                            {v.initials}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="flex items-center gap-1.5 text-sm font-medium text-zinc-100">
+                              {v.name}
+                              {v.personal && <span className="rounded-full bg-purple-500/15 px-1.5 py-0.5 text-[10px] text-purple-300">Personal</span>}
+                            </p>
+                            <p className="truncate text-xs text-zinc-500">{v.desc}</p>
+                            <p className="text-[11px] text-zinc-600">{v.language}</p>
+                          </div>
+                        </div>
+                        <div className="mt-2.5 flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-[11px] text-zinc-400 hover:text-zinc-200"
+                            data-testid={`voice-changer-preview-${v.id}`}
+                            onClick={() => setToast({ kind: "success", msg: `Previewing ${v.name}` })}>
+                            <Play className="h-3 w-3" aria-hidden="true" /> Preview
+                          </Button>
+                          <Button size="sm"
+                            className={`h-7 gap-1 px-3 text-[11px] ${selected ? "bg-indigo-500 text-white hover:bg-indigo-400" : "bg-white/10 text-zinc-200 hover:bg-white/20"}`}
+                            aria-pressed={selected}
+                            data-testid={`voice-changer-select-${v.id}`}
+                            onClick={() => { setSelectedVoice(v); setError(""); }}>
+                            {selected ? <><CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Selected</> : "Select"}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <Button variant="outline" size="sm" onClick={() => navigate("/my-voices")}
+                  data-testid="voice-changer-add-voice-button"
+                  className="mt-4 w-full gap-1.5 border-dashed border-white/20 bg-transparent text-zinc-300 hover:border-indigo-500/40 hover:bg-indigo-500/5">
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Add Voice
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Voice Settings */}
+            <Card className="border-white/10 bg-white/[0.03]" data-testid="voice-changer-settings">
+              <CardContent className="p-5">
+                <button type="button" aria-expanded={settingsOpen}
+                  data-testid="voice-changer-settings-toggle"
+                  onClick={() => setSettingsOpen(o => !o)}
+                  className="flex w-full items-center justify-between text-left">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+                    <SlidersHorizontal className="h-4 w-4 text-zinc-400" aria-hidden="true" /> Voice Settings
+                  </span>
+                  <ChevronDown className={`h-4 w-4 text-zinc-500 transition-transform ${settingsOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+                </button>
+                {settingsOpen && (
+                  <div className="mt-5 space-y-5" data-testid="voice-changer-settings-body">
+                    {([
+                      ["stability", "Stability", 0, 100],
+                      ["similarity", "Similarity", 0, 100],
+                      ["style", "Style / Expression", 0, 100],
+                      ["speed", "Speed", 50, 150],
+                      ["pitch", "Pitch", 0, 100],
+                    ] as const).map(([key, label, min, max]) => (
+                      <div key={key}>
+                        <div className="mb-2 flex items-center justify-between">
+                          <label htmlFor={`setting-${key}`} className="text-xs text-zinc-400">{label}</label>
+                          <span className="text-xs tabular-nums font-medium text-indigo-300">{settings[key]}</span>
+                        </div>
+                        <Slider id={`setting-${key}`} value={[settings[key]]} min={min} max={max} step={1}
+                          aria-label={label}
+                          onValueChange={([v]) => setSettings(s => ({ ...s, [key]: v }))} />
+                      </div>
+                    ))}
+                    <Button variant="ghost" size="sm" onClick={() => setSettings({ ...DEFAULT_SETTINGS })}
+                      data-testid="voice-changer-reset-settings-button"
+                      className="gap-1.5 text-zinc-400 hover:text-zinc-200">
+                      <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Reset settings
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Generate */}
+            <div className="space-y-2" data-testid="voice-changer-generate-section">
+              {error && (
+                <p role="alert" data-testid="voice-changer-error" className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                  <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" /> {error}
+                </p>
+              )}
+              <Button onClick={startProcessing} data-testid="voice-changer-generate-button"
+                className="w-full gap-2 bg-indigo-500 py-6 text-base font-semibold text-white hover:bg-indigo-400">
+                <Mic2 className="h-5 w-5" aria-hidden="true" /> Generate Voice
+              </Button>
+              <p className="text-center text-[11px] text-zinc-500">Voice conversion will process the selected media.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+};
+
+/** Reusable media player card (works for both source and converted mock output). */
+const MediaPlayer = ({ media, label, mockConverted, showMeta }: {
+  media: ProjectMedia; label: string; mockConverted: boolean; showMeta?: boolean;
+}) => {
+  const ref = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState(0);
+  const [duration, setDuration] = useState(media.duration);
+  const [volume, setVolume] = useState(1);
+
+  const toggle = () => {
+    const el = ref.current;
+    if (!el) return;
+    if (el.paused) { el.play().catch(() => {}); setPlaying(true); } else { el.pause(); setPlaying(false); }
+  };
+
+  const bars = Array.from({ length: 72 }, (_, i) =>
+    25 + Math.abs(Math.sin(i * 0.63 + (mockConverted ? 2 : 0)) * 35) + Math.abs(Math.sin(i * 0.19)) * 40);
+
+  return (
+    <Card className="border-white/10 bg-white/[0.03]" data-testid={`voice-changer-media-${label.toLowerCase().replace(/\s+/g, "-")}`}>
+      <CardContent className="space-y-4 p-4">
+        {media.kind === "video" ? (
+          <video ref={ref} src={media.url} poster={media.thumbnail}
+            className="aspect-video w-full rounded-lg bg-black"
+            aria-label={`${label} video preview`}
+            onTimeUpdate={e => setTime(e.currentTarget.currentTime)}
+            onLoadedMetadata={e => setDuration(e.currentTarget.duration || media.duration)}
+            onEnded={() => setPlaying(false)} />
+        ) : (
+          <div ref={containerRef} className="relative overflow-hidden rounded-lg border border-white/10 bg-white/[0.02] p-4">
+            <div className="flex h-28 items-center gap-1" aria-hidden="true">
+              {bars.map((h, i) => (
+                <span key={i}
+                  className={`w-full rounded-sm ${mockConverted ? "bg-purple-400/80" : "bg-indigo-400/80"} ${i / bars.length <= time / (duration || 1) ? "" : "opacity-30"}`}
+                  style={{ height: `${h}%` }} />
+              ))}
+            </div>
+            <audio ref={ref} src={media.url} aria-label={`${label} audio preview`}
+              onTimeUpdate={e => setTime(e.currentTarget.currentTime)}
+              onLoadedMetadata={e => setDuration(e.currentTarget.duration || media.duration)}
+              onEnded={() => setPlaying(false)} className="hidden" />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Button variant="secondary" size="sm" onClick={toggle} aria-label={playing ? "Pause" : "Play"}
+            className="h-9 w-9 shrink-0 rounded-full bg-white/10 p-0 text-zinc-100 hover:bg-white/20">
+            {playing ? <Pause className="h-4 w-4" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
+          </Button>
+          <span className="shrink-0 text-xs tabular-nums text-zinc-400">{fmtTime(time)} / {fmtTime(duration)}</span>
+          <Slider value={[time]} max={duration || 1} step={0.1}
+            onValueChange={([v]) => { if (ref.current) { ref.current.currentTime = v; } setTime(v); }}
+            aria-label="Seek timeline" className="flex-1" />
+          <div className="flex w-28 shrink-0 items-center gap-2">
+            <Volume2 className="h-4 w-4 shrink-0 text-zinc-500" aria-hidden="true" />
+            <Slider value={[volume]} max={1} step={0.05}
+              onValueChange={([v]) => { setVolume(v); if (ref.current) ref.current.volume = v; }}
+              aria-label="Volume" className="flex-1" />
+          </div>
+          {media.kind === "video" && (
+            <Button variant="ghost" size="sm" aria-label="Fullscreen"
+              className="h-9 w-9 shrink-0 p-0 text-zinc-400 hover:text-zinc-200"
+              onClick={() => containerRef.current?.requestFullscreen?.().catch(() => {}) || ref.current?.requestFullscreen?.().catch(() => {})}>
+              <Maximize2 className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          )}
+        </div>
+
+        {showMeta && (
+          <div className="grid gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-3 text-xs sm:grid-cols-3">
+            <div><span className="text-zinc-500">Original file: </span><span className="truncate text-zinc-300">{media.name}</span></div>
+            <div><span className="text-zinc-500">Duration: </span><span className="text-zinc-300">{fmtTime(media.duration)}</span></div>
+            <div><span className="text-zinc-500">Language: </span><span className="text-zinc-300">{media.language}</span></div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

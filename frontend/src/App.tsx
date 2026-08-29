@@ -11,6 +11,7 @@ import Projects from "./pages/Projects";
 import Settings from "./pages/Settings";
 import NewProject from "./pages/NewProject";
 import VoiceChanger from "./pages/VoiceChanger";
+import Publish from "./pages/Publish";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
               <Route path="/" element={<Studio />} />
               <Route path="/new-project" element={<NewProject />} />
               <Route path="/voice-changer" element={<VoiceChanger />} />
+              <Route path="/publish" element={<Publish />} />
               <Route path="/my-voices" element={<Myvoices />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/settings" element={<Settings />} />

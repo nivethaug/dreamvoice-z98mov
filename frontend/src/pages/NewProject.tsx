@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { projectStore } from "@/lib/projectStore";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
@@ -348,7 +349,7 @@ const NewProject = () => {
             <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs leading-relaxed text-zinc-300">
               <Checkbox
                 checked={rightsConfirmed}
-                onCheckedChange={v => setRightsConfirmed(v === true)}
+                onCheckedChange={v => { setRightsConfirmed(v === true); projectStore.setRights(v === true); }}
                 aria-label="Confirm voice rights and authorization"
                 data-testid="new-project-rights-checkbox"
                 className="mt-0.5" />
@@ -367,7 +368,16 @@ const NewProject = () => {
           <Button
             disabled={!rightsConfirmed}
             data-testid="new-project-continue-button"
-            onClick={() => navigate("/voice-changer")}
+            onClick={() => {
+              if (file) {
+                projectStore.setMedia({
+                  name: file.name, kind: file.kind, ext: file.ext, size: file.size,
+                  duration: file.duration, url: file.url, thumbnail: file.thumbnail,
+                  language: "English",
+                });
+              }
+              navigate("/voice-changer");
+            }}
             className="gap-2 bg-indigo-500 text-white hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50">
             <Sparkles className="h-4 w-4" aria-hidden="true" /> Continue
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
