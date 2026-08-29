@@ -14,6 +14,7 @@ from services.auth_service import AuthService
 from routes.health import router as health_router
 from routes.auth import router as auth_router
 from routes.voice_conversion import router as voice_conversion_router
+from routes.ai import router as ai_router
 from services.voice_conversion import job_manager as voice_job_manager  # noqa: F401
 
 
@@ -39,6 +40,8 @@ async def lifespan(app: FastAPI):
     await voice_job_manager.shutdown()
     from services.voice_conversion.temp_store import shutdown_cleanup
     shutdown_cleanup()
+    from services.queue import queue_shutdown
+    queue_shutdown()
 
 
 # Create FastAPI app (Swagger/OpenAPI enabled)
@@ -63,6 +66,7 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(voice_conversion_router)
+app.include_router(ai_router)
 
 
 @app.get("/swagger", include_in_schema=False)

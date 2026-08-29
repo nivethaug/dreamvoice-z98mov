@@ -107,6 +107,14 @@ class VoiceConversionJobManager:
                 "target_voice": {
                     "voice_id": target_voice.get("voice_id"),
                     "voice_name": target_voice.get("voice_name"),
+                    "language": target_voice.get("language"),
+                    # Authorization metadata required by provider engines.
+                    # Never contains secrets or internal provider IDs.
+                    "authorized": bool(target_voice.get("authorized")),
+                    "reference_sample_url": target_voice.get(
+                        "reference_sample_url"
+                    ),
+                    "sample_storage_key": target_voice.get("sample_storage_key"),
                 },
                 "settings": settings,
                 "output_format": output_format,
@@ -227,6 +235,10 @@ def build_engine_from_provider(
         from .engines.remote_engine import RemoteVoiceConversionEngine
 
         return RemoteVoiceConversionEngine(cfg)
+    if cfg.provider == PROVIDER_RUNPOD:
+        from .engines.runpod_engine import RunPodVoiceConversionEngine
+
+        return RunPodVoiceConversionEngine(cfg)
     raise ProviderConfigError(
         f"Invalid VOICE_CONVERSION_PROVIDER '{cfg.provider}'."
     )

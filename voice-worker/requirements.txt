@@ -1,0 +1,23 @@
+# Seed-VC GPU Worker requirements
+# Python 3.10+ required (Seed-VC dependency chain)
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pydantic==2.10.4
+pydantic-settings==2.7.0
+httpx==0.28.1
+pytest==8.3.4
+
+# --- Seed-VC inference stack (install on the GPU host only) ---
+# Install PyTorch matching your CUDA driver, e.g.:
+#   pip install torch==2.4.1 torchaudio --index-url https://download.pytorch.org/whl/cu121
+torch>=2.1.0
+torchaudio>=2.1.0
+librosa>=0.10.2
+numpy<2.0
+scipy
+soundfile
+einops
+omegaconf
+gradio-client
+scikit-learn

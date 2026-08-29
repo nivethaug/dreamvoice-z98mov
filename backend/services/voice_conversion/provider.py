@@ -4,11 +4,16 @@ All provider configuration comes from backend environment variables.
 Secrets are never exposed to the frontend or logged.
 
 Supported providers (VOICE_CONVERSION_PROVIDER):
-  mock       - simulated pipeline (Step 4A; used ONLY when explicitly configured)
-  openrouter - OpenRouter gateway (requires OPENROUTER_API_KEY)
+  mock       - simulated pipeline (development/testing ONLY; must be
+               explicitly configured — never a silent fallback)
+  openrouter - capability-checked gateway (will refuse if no true
+               audio-to-audio model is available)
   remote     - generic remote Seed-VC / GPU inference endpoint
               (VOICE_CONVERSION_API_URL, VOICE_CONVERSION_API_KEY,
                VOICE_CONVERSION_MODEL)
+  runpod     - RunPod serverless GPU inference (production path)
+              (RUNPOD_API_KEY, RUNPOD_VOICE_ENDPOINT_ID,
+               RUNPOD_VOICE_MODEL)
 """
 import os
 
@@ -16,7 +21,13 @@ import os
 PROVIDER_MOCK = "mock"
 PROVIDER_OPENROUTER = "openrouter"
 PROVIDER_REMOTE = "remote"
-VALID_PROVIDERS = {PROVIDER_MOCK, PROVIDER_OPENROUTER, PROVIDER_REMOTE}
+PROVIDER_RUNPOD = "runpod"
+VALID_PROVIDERS = {
+    PROVIDER_MOCK,
+    PROVIDER_OPENROUTER,
+    PROVIDER_REMOTE,
+    PROVIDER_RUNPOD,
+}
 
 
 class ProviderNotConfiguredError(Exception):
@@ -45,6 +56,9 @@ class ProviderSettings:
         self.remote_api_url = _get("VOICE_CONVERSION_API_URL")
         self.remote_api_key = _get("VOICE_CONVERSION_API_KEY")
         self.remote_model = _get("VOICE_CONVERSION_MODEL") or "seed-vc"
+        self.runpod_api_key = _get("RUNPOD_API_KEY")
+        self.runpod_endpoint_id = _get("RUNPOD_VOICE_ENDPOINT_ID")
+        self.runpod_model = _get("RUNPOD_VOICE_MODEL") or "seed-vc"
 
     # -- capability checks --------------------------------------------------
 
@@ -64,6 +78,13 @@ class ProviderSettings:
             if not self.remote_api_key:
                 missing.append("VOICE_CONVERSION_API_KEY")
             return missing
+        if self.provider == PROVIDER_RUNPOD:
+            missing = []
+            if not self.runpod_api_key:
+                missing.append("RUNPOD_API_KEY")
+            if not self.runpod_endpoint_id:
+                missing.append("RUNPOD_VOICE_ENDPOINT_ID")
+            return missing
         return []
 
     def validate(self) -> None:
@@ -81,6 +102,13 @@ class ProviderSettings:
             raise ProviderNotConfiguredError(
                 "Voice conversion provider is not configured yet.", missing
             )
+        if self.provider == PROVIDER_MOCK:
+            env = (_get("ENVIRONMENT") or "development").lower()
+            if env not in ("development", "test", "testing"):
+                raise ProviderConfigError(
+                    "Mock voice-conversion engine is not allowed outside "
+                    "development/test environments."
+                )
 
     def status(self) -> dict:
         """Safe public status - booleans only, never secret values."""
@@ -95,7 +123,8 @@ class ProviderSettings:
             "configured": configured,
             "provider": self.provider or None,
             "real_conversion_available": configured
-            and self.provider in (PROVIDER_OPENROUTER, PROVIDER_REMOTE),
+            and self.provider
+            in (PROVIDER_OPENROUTER, PROVIDER_REMOTE, PROVIDER_RUNPOD),
             "error": error,
         }
 
