@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { projectStore, type ProjectMedia } from "@/lib/projectStore";
+import { voiceStore } from "@/lib/voiceStore";
 
 const fmtTime = (s: number) => {
   if (!isFinite(s) || s < 0) s = 0;
@@ -22,13 +23,18 @@ interface Voice {
   personal?: boolean; addedAt: number; initials: string; hue: number;
 }
 
-const VOICES: Voice[] = [
-  { id: "my-voice", name: "My Voice", desc: "Personal voice", tags: "Personal", language: "English", personal: true, addedAt: 5, initials: "MV", hue: 258 },
-  { id: "female-presenter", name: "Female Presenter", desc: "Warm · Clear · Conversational", tags: "Warm · Clear · Conversational", language: "English", addedAt: 4, initials: "FP", hue: 280 },
-  { id: "male-narrator", name: "Male Narrator", desc: "Deep · Professional", tags: "Deep · Professional", language: "English", addedAt: 3, initials: "MN", hue: 220 },
-  { id: "tamil-presenter", name: "Tamil Presenter", desc: "Natural · Expressive", tags: "Natural · Expressive", language: "Tamil", addedAt: 2, initials: "TP", hue: 160 },
-  { id: "hindi-presenter", name: "Hindi Presenter", desc: "Fluent · Engaging", tags: "Fluent · Engaging", language: "Hindi", addedAt: 1, initials: "HP", hue: 30 },
-];
+// Shared voice library (mock/local state via voiceStore)
+const useAllVoices = (): Voice[] => {
+  const [voices, setVoices] = useState<Voice[]>(() => voiceStore.getVoices().map(toVoice));
+  useEffect(() => voiceStore.subscribe(() => setVoices(voiceStore.getVoices().map(toVoice))), []);
+  return voices;
+};
+
+const toVoice = (v: ReturnType<typeof voiceStore.getVoices>[number]): Voice => ({
+  id: v.id, name: v.name, desc: v.desc, tags: v.desc,
+  language: v.language, personal: v.personal, addedAt: v.addedAt,
+  initials: v.initials, hue: v.hue,
+});
 
 const FILTERS = ["All", "My Voices", "English", "Tamil", "Hindi", "Other"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -70,8 +76,19 @@ const VoiceChanger = () => {
     return () => clearTimeout(t);
   }, [toast]);
 
+  const allVoices = useAllVoices();
+
+  // Preselect pending voice (e.g. "Use Voice" from My Voices)
+  useEffect(() => {
+    const id = voiceStore.getPendingVoiceId();
+    if (!id) return;
+    const v = allVoices.find(x => x.id === id);
+    if (v) setSelectedVoice(v);
+    voiceStore.setPendingVoiceId(null);
+  }, [allVoices]);
+
   const voices = useMemo(() => {
-    let list = VOICES.filter(v =>
+    let list = allVoices.filter(v =>
       v.name.toLowerCase().includes(query.toLowerCase()) ||
       v.desc.toLowerCase().includes(query.toLowerCase()));
     if (filter === "My Voices") list = list.filter(v => v.personal);
@@ -80,7 +97,7 @@ const VoiceChanger = () => {
     if (sort === "Recently Added") list = [...list].sort((a, b) => b.addedAt - a.addedAt);
     else if (sort === "Name") list = [...list].sort((a, b) => a.name.localeCompare(b.name));
     return list;
-  }, [query, filter, sort]);
+  }, [allVoices, query, filter, sort]);
 
   const startProcessing = () => {
     if (!media) { setError("No media selected. Please go back and upload a file."); return; }

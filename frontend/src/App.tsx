@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./layout/Layout";
 import Studio from "./pages/Studio";
 import Myvoices from "./pages/Myvoices";
+import CreateVoice from "./pages/CreateVoice";
 import Projects from "./pages/Projects";
 import Settings from "./pages/Settings";
 import NewProject from "./pages/NewProject";
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/voice-changer" element={<VoiceChanger />} />
               <Route path="/publish" element={<Publish />} />
               <Route path="/my-voices" element={<Myvoices />} />
+              <Route path="/voices/create" element={<CreateVoice />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<NotFound />} />
