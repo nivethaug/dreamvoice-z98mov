@@ -15,6 +15,15 @@ from .engines.base import (
     VoiceConversionEngine,
 )
 from .engines.mock_engine import MockVoiceConversionEngine
+from .provider import (
+    PROVIDER_MOCK,
+    PROVIDER_OPENROUTER,
+    PROVIDER_REMOTE,
+    ProviderConfigError,
+    ProviderNotConfiguredError,
+    ProviderSettings,
+    load_provider_settings,
+)
 
 # Valid job states, in lifecycle order
 JOB_STATES = (
@@ -46,10 +55,27 @@ class VoiceConversionJobManager:
     """Model-agnostic job manager: owns jobs, delegates work to an engine."""
 
     def __init__(self, engine: Optional[VoiceConversionEngine] = None):
-        # Swap engine later: SeedVCVoiceConversionEngine, RVCVoiceConversionEngine...
-        self.engine: VoiceConversionEngine = engine or MockVoiceConversionEngine()
+        # Engine is chosen from VOICE_CONVERSION_PROVIDER env config; swap
+        # later without changing the public API. Built lazily so a missing
+        # provider config never crashes app startup - jobs fail cleanly
+        # with "not configured yet" instead.
+        self.engine: Optional[VoiceConversionEngine] = engine
+        self._engine_error: Optional[str] = None
+        if engine is None:
+            try:
+                self.engine = build_engine_from_provider()
+            except (ProviderNotConfiguredError, ProviderConfigError) as exc:
+                self._engine_error = str(exc)
         self._jobs: Dict[str, Dict[str, Any]] = {}
         self._tasks: Dict[str, asyncio.Task] = {}
+
+    def _require_engine(self) -> VoiceConversionEngine:
+        if self.engine is None:
+            raise ProviderNotConfiguredError(
+                self._engine_error or "Voice conversion is not configured yet.",
+                ["VOICE_CONVERSION_PROVIDER"],
+            )
+        return self.engine
 
     # ------------------------------------------------------------------ API
 
@@ -61,7 +87,8 @@ class VoiceConversionJobManager:
         output_format = payload.get("output_format", "mp3")
 
         # Engine-side validation BEFORE accepting the job
-        await self.engine.validate(source_media, source_audio, target_voice, settings)
+        engine = self._require_engine()
+        await engine.validate(source_media, source_audio, target_voice, settings)
 
         job_id = uuid.uuid4().hex
         now = datetime.now(timezone.utc)
@@ -71,7 +98,7 @@ class VoiceConversionJobManager:
             "progress": 0,
             "stage": None,
             "error": None,
-            "engine": self.engine.name,
+            "engine": engine.name,
             "created_at": now.isoformat(),
             "updated_at": now.isoformat(),
             "request": {
@@ -103,7 +130,7 @@ class VoiceConversionJobManager:
             raise JobNotCancellableError(
                 f"Job is already {job['state']} and cannot be cancelled."
             )
-        await self.engine.cancel(job_id)
+        await self._require_engine().cancel(job_id)
         task = self._tasks.get(job_id)
         if task:
             task.cancel()
@@ -134,7 +161,8 @@ class VoiceConversionJobManager:
                 self._set(current, stage=stage, state=state, progress=int(pct))
 
         try:
-            result = await self.engine.convert(
+            engine = self._require_engine()
+            result = await engine.convert(
                 job_id=job_id,
                 source_media=req["source_media"],
                 source_audio=req["source_audio"],
@@ -179,5 +207,49 @@ class VoiceConversionJobManager:
             self._jobs.pop(jid, None)
 
 
+def build_engine_from_provider(
+    provider_settings: Optional[ProviderSettings] = None,
+) -> VoiceConversionEngine:
+    """Select the conversion engine from environment configuration.
+
+    The mock engine is used ONLY when explicitly configured via
+    VOICE_CONVERSION_PROVIDER=mock - we never silently fall back to it.
+    """
+    cfg = provider_settings or load_provider_settings()
+    cfg.validate()  # raises ProviderNotConfiguredError / ProviderConfigError
+    if cfg.provider == PROVIDER_MOCK:
+        return MockVoiceConversionEngine()
+    if cfg.provider == PROVIDER_OPENROUTER:
+        from .engines.openrouter_engine import OpenRouterVoiceEngine
+
+        return OpenRouterVoiceEngine(cfg)
+    if cfg.provider == PROVIDER_REMOTE:
+        from .engines.remote_engine import RemoteVoiceConversionEngine
+
+        return RemoteVoiceConversionEngine(cfg)
+    raise ProviderConfigError(
+        f"Invalid VOICE_CONVERSION_PROVIDER '{cfg.provider}'."
+    )
+
+
 # Module-level singleton used by the routes
 job_manager = VoiceConversionJobManager()
+
+
+def provider_status() -> dict:
+    """Safe public provider status (no secrets)."""
+    return load_provider_settings().status()
+
+
+# Re-exported for routes/tests
+__all__ = [
+    "JOB_STATES",
+    "JobNotCancellableError",
+    "JobNotFoundError",
+    "VoiceConversionJobManager",
+    "build_engine_from_provider",
+    "job_manager",
+    "provider_status",
+    "ProviderConfigError",
+    "ProviderNotConfiguredError",
+]

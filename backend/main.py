@@ -35,8 +35,10 @@ async def lifespan(app: FastAPI):
     
     print(f"🚀 {settings.PROJECT_NAME} is ready!")
     yield
-    # Cancel in-flight voice conversion jobs on shutdown
+    # Cancel in-flight voice conversion jobs + clean temp files on shutdown
     await voice_job_manager.shutdown()
+    from services.voice_conversion.temp_store import shutdown_cleanup
+    shutdown_cleanup()
 
 
 # Create FastAPI app (Swagger/OpenAPI enabled)
