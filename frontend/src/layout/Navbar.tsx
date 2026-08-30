@@ -128,6 +128,15 @@ const Sidebar = () => {
             {label}
           </NavLink>
         ))}
+        <button
+          data-testid="navbar-logout-button-mobile"
+          aria-label="Log out"
+          onClick={() => { logout(); navigate("/login"); }}
+          className="flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 text-[11px] text-zinc-500 transition-colors hover:text-zinc-200"
+        >
+          <User className="h-5 w-5" aria-hidden="true" />
+          Log out
+        </button>
       </nav>
     </>
   );
