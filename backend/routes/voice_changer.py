@@ -8,6 +8,7 @@ the backend and is never logged.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import tempfile
@@ -32,7 +33,10 @@ from services.storage.public_media import (
 from services.voice_conversion.voice_api_media import (
     VoiceApiMediaClient,
     VoiceApiMediaError,
+    claim_source,
     get_media_client,
+    peek_source,
+    remember_source,
 )
 from services.voice_conversion import job_manager
 from services.voice_conversion.job_manager import provider_status
@@ -118,12 +122,22 @@ async def upload_source_media(
                 detail=str(exc),
             )
         va_file_id = str(info.get("file_id") or "")
+        # Upload response omits stream metadata; fetch full metadata via GET.
+        if va_file_id:
+            try:
+                full = await asyncio.to_thread(
+                    media_client.get, va_file_id
+                )
+                info = {**info, **full}
+            except VoiceApiMediaError:
+                pass
         duration = float(info.get("duration") or 0)
         audio_meta = info.get("audio") or {}
         has_audio = bool(
             info.get("has_audio")
             or audio_meta.get("present")
             or info.get("media_type") == "audio"
+            or info.get("kind") == "audio"
         )
         if not has_audio:
             await asyncio.to_thread(media_client.delete, va_file_id)
@@ -253,12 +267,22 @@ async def upload_voice_reference(
                 detail=str(exc),
             )
         va_file_id = str(info.get("file_id") or "")
+        # Upload response omits stream metadata; fetch full metadata via GET.
+        if va_file_id:
+            try:
+                full = await asyncio.to_thread(
+                    media_client.get, va_file_id
+                )
+                info = {**info, **full}
+            except VoiceApiMediaError:
+                pass
         duration = float(info.get("duration") or 0)
         audio_meta = info.get("audio") or {}
         has_audio = bool(
             info.get("has_audio")
             or audio_meta.get("present")
             or info.get("media_type") == "audio"
+            or info.get("kind") == "audio"
         )
         if not has_audio:
             await asyncio.to_thread(media_client.delete, va_file_id)
