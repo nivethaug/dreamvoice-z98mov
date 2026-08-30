@@ -1,10 +1,11 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   Mic2, Library, FolderKanban, Settings as SettingsIcon, AudioWaveform,
   HelpCircle, User, ChevronRight, Youtube, Languages, Captions, FileText,
   Sparkles
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { logout } from "@/lib/backend";
 
 const mainLinks = [
   { to: "/", label: "Studio", icon: AudioWaveform },
@@ -22,6 +23,7 @@ const soonLinks = [
 ];
 
 const Sidebar = () => {
+  const navigate = useNavigate();
   return (
     <>
       {/* Desktop sidebar */}
@@ -93,9 +95,14 @@ const Sidebar = () => {
               <HelpCircle className="h-4 w-4" aria-hidden="true" /> Help
             </span>
           </button>
-          <button className="flex min-h-[40px] items-center gap-3 rounded-lg px-3 text-sm text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200">
+          <button
+            data-testid="navbar-logout-button"
+            aria-label="Log out"
+            onClick={() => { logout(); navigate("/login"); }}
+            className="flex min-h-[40px] items-center gap-3 rounded-lg px-3 text-sm text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
+          >
             <span className="flex items-center gap-3">
-              <User className="h-4 w-4" aria-hidden="true" /> Account
+              <User className="h-4 w-4" aria-hidden="true" /> Log out
             </span>
             <ChevronRight className="ml-auto h-4 w-4 text-zinc-600" aria-hidden="true" />
           </button>
