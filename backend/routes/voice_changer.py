@@ -24,6 +24,7 @@ from models.voice import Voice
 from services.auth_service import AuthService
 from services.audio.ffmpeg import (
     MediaProcessingError,
+    extract_audio,
     ffprobe,
 )
 from services.storage.object_store import StorageError, get_object_store, make_key
@@ -231,8 +232,17 @@ async def upload_voice_reference(
         if duration > MAX_REFERENCE_DURATION:
             raise HTTPException(status_code=422, detail="Reference audio exceeds the 10 minute limit.")
 
-        key = make_key(f"voice-ref/{voice.id}", name)
-        get_object_store().upload(tmp_path, key)
+        # Normalize to clean 44.1kHz mono WAV — Seed-VC rejects some
+        # container/codec combinations (e.g. OGG) with INVALID_INPUT.
+        wav_path = tmp_path + ".norm.wav"
+        try:
+            extract_audio(tmp_path, wav_path)
+            store_path = wav_path
+        except MediaProcessingError:
+            store_path = tmp_path  # keep original if ffmpeg unavailable
+
+        key = make_key(f"voice-ref/{voice.id}", "reference.wav")
+        get_object_store().upload(store_path, key)
     finally:
         try:
             os.remove(tmp_path)
@@ -480,8 +490,9 @@ async def cancel_job(
 temp_media_router = APIRouter(prefix="/api/media", tags=["media"])
 
 
+@temp_media_router.api_route("/temp/{token}/{filename}", methods=["GET", "HEAD"])
 @temp_media_router.api_route("/temp/{token}", methods=["GET", "HEAD"])
-async def serve_temp_media(token: str):
+async def serve_temp_media(token: str, filename: str = ""):
     """HMAC-signed, expiring object serving for the local storage provider.
 
     Token format: {key_b64}:{exp}:{hmac(key:exp)} — no directory listing,

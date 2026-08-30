@@ -142,12 +142,12 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
             src_local = tmpdir / f"source_{src_key.rsplit('/', 1)[-1]}"
             await asyncio.to_thread(store.download, src_key, str(src_local))
 
-            # ---- video: extract audio (CPU, FFmpeg) ----
-            if is_video:
-                report("Analyzing speech", "processing", 20)
-                src_local = await asyncio.to_thread(
-                    extract_audio, str(src_local), str(tmpdir / "source_audio.wav")
-                )
+            # ---- normalize to clean WAV (Seed-VC rejects OGG/some MP3s);
+            #      for video this also extracts the audio track ----
+            report("Analyzing speech", "processing", 20)
+            src_local = await asyncio.to_thread(
+                extract_audio, str(src_local), str(tmpdir / "source_audio.wav")
+            )
 
             # ---- publish source audio via public HTTPS ----
             report("Preparing media", "preparing", 30)

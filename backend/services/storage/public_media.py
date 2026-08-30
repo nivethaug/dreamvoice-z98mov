@@ -95,7 +95,10 @@ def store_media(local_path: str, prefix: str, ext: str) -> Dict[str, Any]:
     else:
         base = _public_base()
         if base:
-            url = f"{base}/api/media/temp/{make_media_token(key)}"
+            # The Voice API requires the URL path to end with a supported
+            # audio extension — embed the object's filename in the path.
+            fname = key.rsplit("/", 1)[-1]
+            url = f"{base}/api/media/temp/{make_media_token(key)}/{fname}"
     if not url:
         # No public URL strategy available in this environment.
         store.delete(key)
