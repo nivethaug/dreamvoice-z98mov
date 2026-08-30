@@ -22,17 +22,17 @@ from sqlalchemy.orm import Session
 from core.database import get_db
 from models.voice import Voice
 from services.auth_service import AuthService
-from services.audio.ffmpeg import (
-    MediaProcessingError,
-    extract_audio,
-    ffprobe,
-)
 from services.storage.object_store import StorageError, get_object_store, make_key
 from services.storage.public_media import (
     delete_media,
     read_media,
     store_media,
     verify_media_token,
+)
+from services.voice_conversion.voice_api_media import (
+    VoiceApiMediaClient,
+    VoiceApiMediaError,
+    get_media_client,
 )
 from services.voice_conversion import job_manager
 from services.voice_conversion.job_manager import provider_status
@@ -105,16 +105,34 @@ async def upload_source_media(
         tmp_path = tmp.name
 
     try:
+        # ALL media inspection happens in the shared Voice API (server-side
+        # ffprobe). DreamVoice uploads the bytes there and reads metadata.
+        media_client = get_media_client()
         try:
-            info = ffprobe(tmp_path)
-        except MediaProcessingError as exc:
-            raise HTTPException(status_code=422, detail=str(exc))
+            info = await asyncio.to_thread(
+                media_client.upload, tmp_path, name
+            )
+        except VoiceApiMediaError as exc:
+            raise HTTPException(
+                status_code=(exc.status if exc.status in (400, 413, 415, 422) else 422),
+                detail=str(exc),
+            )
+        va_file_id = str(info.get("file_id") or "")
         duration = float(info.get("duration") or 0)
-        if not info.get("has_audio"):
+        audio_meta = info.get("audio") or {}
+        has_audio = bool(
+            info.get("has_audio")
+            or audio_meta.get("present")
+            or info.get("media_type") == "audio"
+        )
+        if not has_audio:
+            await asyncio.to_thread(media_client.delete, va_file_id)
             raise HTTPException(status_code=422, detail="Media file has no audio track.")
         if duration <= 0:
+            await asyncio.to_thread(media_client.delete, va_file_id)
             raise HTTPException(status_code=422, detail="Media duration could not be determined.")
         if duration > MAX_SOURCE_DURATION:
+            await asyncio.to_thread(media_client.delete, va_file_id)
             raise HTTPException(status_code=422, detail="Source media exceeds the 30 minute limit.")
 
         key = make_key("voice-changer-src", name)
@@ -124,6 +142,10 @@ async def upload_source_media(
             os.remove(tmp_path)
         except OSError:
             pass
+
+    # Keep the validated VA copy alive so the engine can reuse it instead
+    # of uploading the same (potentially large) file a second time.
+    remember_source(key, va_file_id, duration)
 
     return {
         "media_id": key,
@@ -219,35 +241,61 @@ async def upload_voice_reference(
             tmp.write(chunk)
         tmp_path = tmp.name
 
+    norm_path = None
     try:
+        # ALL inspection + normalization happens in the shared Voice API.
+        media_client = get_media_client()
         try:
-            info = ffprobe(tmp_path)
-        except MediaProcessingError as exc:
-            raise HTTPException(status_code=422, detail=str(exc))
+            info = await asyncio.to_thread(media_client.upload, tmp_path, name)
+        except VoiceApiMediaError as exc:
+            raise HTTPException(
+                status_code=(exc.status if exc.status in (400, 413, 415, 422) else 422),
+                detail=str(exc),
+            )
+        va_file_id = str(info.get("file_id") or "")
         duration = float(info.get("duration") or 0)
-        if not info.get("has_audio"):
+        audio_meta = info.get("audio") or {}
+        has_audio = bool(
+            info.get("has_audio")
+            or audio_meta.get("present")
+            or info.get("media_type") == "audio"
+        )
+        if not has_audio:
+            await asyncio.to_thread(media_client.delete, va_file_id)
             raise HTTPException(status_code=422, detail="Reference file has no audio.")
         if duration <= 0:
+            await asyncio.to_thread(media_client.delete, va_file_id)
             raise HTTPException(status_code=422, detail="Reference audio duration could not be determined.")
         if duration > MAX_REFERENCE_DURATION:
+            await asyncio.to_thread(media_client.delete, va_file_id)
             raise HTTPException(status_code=422, detail="Reference audio exceeds the 10 minute limit.")
 
-        # Normalize to clean 44.1kHz mono WAV — Seed-VC rejects some
-        # container/codec combinations (e.g. OGG) with INVALID_INPUT.
-        wav_path = tmp_path + ".norm.wav"
+        # Normalize to clean 44.1kHz mono WAV via the Voice API — Seed-VC
+        # rejects some container/codec combinations (e.g. OGG) with
+        # INVALID_INPUT.
         try:
-            extract_audio(tmp_path, wav_path)
-            store_path = wav_path
-        except MediaProcessingError:
-            store_path = tmp_path  # keep original if ffmpeg unavailable
+            norm = await asyncio.to_thread(
+                media_client.extract_audio, va_file_id, 44100, 1, "wav"
+            )
+            norm_id = str(norm.get("file_id") or "")
+            norm_path = tmp_path + ".norm.wav"
+            await asyncio.to_thread(media_client.download, norm_id, norm_path)
+            await asyncio.to_thread(media_client.delete, norm_id)
+            store_path = norm_path
+        except VoiceApiMediaError:
+            store_path = tmp_path  # keep original bytes if normalization fails
+        finally:
+            await asyncio.to_thread(media_client.delete, va_file_id)
 
         key = make_key(f"voice-ref/{voice.id}", "reference.wav")
         get_object_store().upload(store_path, key)
     finally:
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
+        for p in (tmp_path, norm_path):
+            if p:
+                try:
+                    os.remove(p)
+                except OSError:
+                    pass
 
     voice.sample_storage_key = key
     voice.reference_duration_seconds = round(duration, 2)
@@ -377,23 +425,22 @@ async def start_conversion(
         shutil.rmtree(tmpdir, ignore_errors=True)
 
     # ---- source metadata for the engine ----
-    # Probe durations (cost protection happens in engine.validate, but the
-    # engine needs the numbers, so we ffprobe the stored source here).
+    # Durations were measured by the Voice API at upload time (server-side
+    # ffprobe). If metadata is missing, ask the Voice API — never probe locally.
     src_meta = store.metadata(req.media_id) or {}
     src_duration = float(src_meta.get("duration_seconds") or src_meta.get("duration") or 0)
     if src_duration <= 0:
-        tmpdir2 = tempfile.mkdtemp(prefix="dvsrc_")
-        try:
-            src_local = os.path.join(tmpdir2, "src_probe")
-            store.download(req.media_id, src_local)
+        pending = peek_source(req.media_id)
+        if pending:
+            src_duration = float(pending.get("duration") or 0)
+        else:
             try:
-                info = ffprobe(src_local)
+                info = await asyncio.to_thread(
+                    get_media_client().get, req.media_id.split("/")[-1]
+                )
                 src_duration = float(info.get("duration") or 0)
-            except MediaProcessingError:
+            except (VoiceApiMediaError, Exception):
                 src_duration = 0.0
-        finally:
-            import shutil
-            shutil.rmtree(tmpdir2, ignore_errors=True)
     media = {
         "storage_key": req.media_id,
         "is_video": os.path.splitext(req.media_id)[1].lower() in VIDEO_EXT,

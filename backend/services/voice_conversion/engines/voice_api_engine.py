@@ -1,15 +1,20 @@
 """Shared Voice API conversion engine (real Seed-VC via voice-api).
 
-Implements the VoiceConversionEngine interface against the shared Voice API
-(https://voice-api.dreamagent.cloud) which fronts the RunPod serverless
-Seed-VC endpoint. DreamVoice never talks to RunPod directly and never uses
-OpenRouter for voice conversion.
+ALL media processing happens inside the shared Voice API
+(https://voice-api.dreamagent.cloud): upload + ffprobe inspection, audio
+extraction/normalization, video audio replacement (mux with
+-c:v copy -shortest). DreamVoice never runs ffmpeg/ffprobe locally — it only
+moves bytes between its object store, the Voice API media store, and public
+HTTPS storage.
 
-Pipeline:
-    source media -> (video: FFmpeg extract audio) -> upload source to public
-    HTTPS storage -> authorized target voice reference URL -> Voice API
-    /v1/voice/convert -> download converted WAV -> validate -> (video:
-    FFmpeg mux with video stream copy) -> store result -> completed
+Pipeline (every processing step is a Voice API media endpoint):
+    DreamVoice store -> VA /v1/media/upload (validation + metadata)
+    -> VA /v1/media/{id}/extract-audio (44.1kHz mono WAV)
+    -> download -> public HTTPS publish -> VA /v1/voice/convert (Seed-VC)
+    -> download converted WAV -> publish (audio_url)
+    -> [video] VA /v1/media/upload(converted) + /replace-audio(video)
+    -> download final MP4 -> publish (video_url)
+    -> VA /v1/media/{id} DELETE for every temp media id
 
 Honest progress: ticks only at known boundaries; while awaiting the Voice
 API the job sits in a genuine indeterminate "Converting voice" state —
@@ -17,25 +22,23 @@ no fabricated 0-100 percentage.
 """
 import asyncio
 import logging
-import os
 import tempfile
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from ...audio.ffmpeg import (
-    MediaProcessingError,
-    extract_audio,
-    ffprobe,
-    mux_video,
-    validate_audio_output,
-)
 from ...storage.public_media import delete_media, store_media
 from ..provider import ProviderSettings
 from ..voice_api_client import (
     VoiceApiClient,
     VoiceApiError,
     get_voice_api_client,
+)
+from ..voice_api_media import (
+    VoiceApiMediaClient,
+    VoiceApiMediaError,
+    claim_source,
+    get_media_client,
 )
 from .base import EngineError, EngineValidationError, VoiceConversionEngine
 
@@ -49,9 +52,11 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
     name = "voiceapi"
 
     def __init__(self, provider_settings: Optional[ProviderSettings] = None,
-                 client: Optional[VoiceApiClient] = None):
+                 client: Optional[VoiceApiClient] = None,
+                 media_client: Optional[VoiceApiMediaClient] = None):
         self._settings = provider_settings or ProviderSettings()
         self._client = client or get_voice_api_client()
+        self._media = media_client or get_media_client()
         self._cancelled: set = set()
         self._pending: Dict[str, asyncio.Event] = {}
 
@@ -130,6 +135,16 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
         src_duration = float(source.get("duration_seconds") or 0)
         tmpdir = Path(tempfile.mkdtemp(prefix=f"dvjob_{job_id[:8]}_"))
         created_keys = []
+        va_media_ids = []  # Voice API media ids to delete at the end
+
+        def va_delete(fid: str) -> None:
+            if not fid:
+                return
+            try:
+                self._media.delete(fid)
+            except Exception as exc:
+                logger.warning("job %s VA media delete %s failed: %s",
+                               job_id, fid, exc)
 
         cancel_event = asyncio.Event()
         self._pending[job_id] = cancel_event
@@ -141,18 +156,63 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
             src_local = tmpdir / f"source_{src_key.rsplit('/', 1)[-1]}"
             await asyncio.to_thread(store.download, src_key, str(src_local))
 
-            # ---- normalize to clean WAV (Seed-VC rejects OGG/some MP3s);
-            #      for video this also extracts the audio track ----
+            # ---- ensure source is in the Voice API (server-side ffprobe) ----
             report("Analyzing speech", "processing", 20)
-            src_local = await asyncio.to_thread(
-                extract_audio, str(src_local), str(tmpdir / "source_audio.wav")
+            src_va_id = await asyncio.to_thread(claim_source, src_key) or ""
+            if src_va_id:
+                # Reuse the copy the upload route already validated.
+                try:
+                    up = await asyncio.to_thread(self._media.get, src_va_id)
+                    up = {**up, "file_id": src_va_id}
+                except VoiceApiMediaError:
+                    va_delete(src_va_id)
+                    src_va_id = ""
+                    up = None
+            if not src_va_id:
+                # VA upload requires a filename with a real extension;
+                # storage keys use bare trailing extensions (".../uuid/mp4"),
+                # so derive the name from the source content type.
+                ext = (src_key.rsplit("/", 1)[-1] if "/" in src_key else "")
+                ext = ext if "." in ext else f".{ext or 'bin'}"
+                up = await asyncio.to_thread(
+                    self._media.upload, str(src_local), f"source{ext}"
+                )
+                src_va_id = up.get("file_id") or ""
+                # The upload response omits stream metadata; fetch full
+                # server-side ffprobe info via get().
+                try:
+                    up = await asyncio.to_thread(self._media.get, src_va_id)
+                    up = {**up, "file_id": src_va_id}
+                except VoiceApiMediaError:
+                    pass
+            va_media_ids.append(src_va_id)
+            va_duration = float(up.get("duration") or 0)
+            if va_duration > 0:
+                src_duration = va_duration
+            if not (up.get("has_audio")
+                    or (up.get("audio") or {}).get("present")
+                    or (up.get("media_type") == "audio")):
+                raise EngineError("Media file has no audio track.")
+
+            # ---- extract + normalize 44.1kHz mono WAV inside the VA ----
+            ext_meta = await asyncio.to_thread(
+                self._media.extract_audio, src_va_id, 44100, 1, "wav"
             )
+            extracted_id = ext_meta.get("file_id") or ""
+            va_media_ids.append(extracted_id)
+            wav_local = tmpdir / "source_audio.wav"
+            await asyncio.to_thread(
+                self._media.download, extracted_id, str(wav_local)
+            )
+            if not wav_local.exists() or wav_local.stat().st_size < 100:
+                raise EngineError(
+                    "Voice conversion failed. Your file was not changed."
+                )
 
             # ---- publish source audio via public HTTPS ----
             report("Preparing media", "preparing", 30)
             pub = await asyncio.to_thread(
-                store_media, str(src_local), "voiceapi-src",
-                src_local.suffix.lstrip(".") or "wav"
+                store_media, str(wav_local), "voiceapi-src", "wav"
             )
             created_keys.append(pub["key"])
 
@@ -182,47 +242,56 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
             except VoiceApiError as exc:
                 raise EngineError(exc.message) from exc
 
-            # ---- download + validate converted WAV ----
+            # ---- download converted WAV ----
             report("Enhancing audio", "enhancing", 70)
             out_url = self._extract_output_url(api_result)
             logger.info("job %s voice-api result: %s", job_id, api_result)
             converted = await self._client.download_output(out_url, tmpdir)
-            try:
-                info = await asyncio.to_thread(
-                    validate_audio_output, str(converted), src_duration
+            if not converted.exists() or converted.stat().st_size < 100:
+                raise EngineError(
+                    "Voice conversion failed. Your file was not changed."
                 )
-            except Exception as exc:
-                logger.error(
-                    "job %s output validation failed: %s (file=%s size=%s head=%s)",
-                    job_id, exc, converted,
-                    converted.stat().st_size if converted.exists() else -1,
-                    open(converted, "rb").read(16) if converted.exists() else b"",
-                )
-                raise
+            out_duration = float(api_result.get("duration") or 0) or src_duration
 
-            # ---- final output: mux video if source was video ----
+            # ---- final output: VA replace-audio for video sources ----
             report("Finalizing", "finalizing", 90)
             result: Dict[str, Any] = {
                 "source_type": source_type,
                 "engine": self.name,
-                "duration_seconds": round(info["duration"], 2),
-                "sample_rate": info.get("sample_rate") or 22050,
+                "duration_seconds": round(out_duration, 2),
+                "sample_rate": api_result.get("sample_rate") or 22050,
             }
 
             if is_video:
-                orig_local = tmpdir / "original_video"
-                await asyncio.to_thread(
-                    store.download, src_key, str(orig_local)
+                # upload converted WAV into the VA media store, then let the
+                # VA mux it into the original video (stream copy, -shortest)
+                conv_up = await asyncio.to_thread(
+                    self._media.upload, str(converted), "converted.wav"
                 )
-                final_mp4 = await asyncio.to_thread(
-                    mux_video, str(orig_local), str(converted),
-                    str(tmpdir / "final.mp4")
-                )
-                out = await asyncio.to_thread(
-                    store_media, str(final_mp4), "voiceapi-out", "mp4"
-                )
-                created_keys.append(out["key"])
-                result["video_url"] = out["public_url"]
+                conv_va_id = conv_up.get("file_id") or ""
+                va_media_ids.append(conv_va_id)
+                try:
+                    final_meta = await asyncio.to_thread(
+                        self._media.replace_audio, src_va_id, conv_va_id
+                    )
+                    final_id = final_meta.get("file_id") or ""
+                    va_media_ids.append(final_id)
+                    final_local = tmpdir / "final.mp4"
+                    await asyncio.to_thread(
+                        self._media.download, final_id, str(final_local)
+                    )
+                    if not final_local.exists() or final_local.stat().st_size < 1000:
+                        raise EngineError(
+                            "Voice conversion failed. Your file was not changed."
+                        )
+                    out = await asyncio.to_thread(
+                        store_media, str(final_local), "voiceapi-out", "mp4"
+                    )
+                    created_keys.append(out["key"])
+                    result["video_url"] = out["public_url"]
+                finally:
+                    va_delete(conv_va_id)
+
                 wav_out = await asyncio.to_thread(
                     store_media, str(converted), "voiceapi-out", "wav"
                 )
@@ -243,19 +312,21 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
             )
             result["job_id"] = job_id
             result["status"] = "completed"
-            # Keep the public result URLs alive for the TTL window; drop the
-            # intermediate source copy immediately.
+            # Drop the intermediate source copy immediately; keep result
+            # URLs alive for the TTL window.
             for k in created_keys:
                 if "voiceapi-src" in k:
                     await asyncio.to_thread(delete_media, k)
             return result
 
-        except MediaProcessingError as exc:
-            raise EngineError(str(exc)) from exc
+        except VoiceApiMediaError as exc:
+            raise EngineError(exc.message) from exc
         except asyncio.CancelledError:
             raise
         finally:
             self._pending.pop(job_id, None)
+            for fid in va_media_ids:
+                va_delete(fid)
             _safe_rmtree(tmpdir)
 
     # --------------------------------------------------------------- cancel

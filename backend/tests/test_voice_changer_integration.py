@@ -102,11 +102,42 @@ def patch_store_pm(pm, monkey=None):
     pm.delete_media = lambda key: None
 
 
-def patch_ffmpeg(ff):
-    ff.extract_audio = lambda src, dest=None: Path(str(src))
-    ff.mux_video = lambda v, a, dest: Path(dest)
-    ff.validate_audio_output = lambda path, expected: {
-        "duration": expected, "sample_rate": 22050}
+def make_media(tmp: Path):
+    """Fake VoiceApiMediaClient — ALL processing mocked (Voice API side)."""
+    import services.voice_conversion.voice_api_media as vam
+
+    calls = {"replace_audio": [], "upload": 0}
+
+    class FakeMedia(vam.VoiceApiMediaClient):
+        def upload(self, file_path, filename=None):
+            calls["upload"] += 1
+            p = Path(file_path)
+            return {"file_id": f"src_{calls['upload']}", "filename": p.name,
+                    "duration": 30.0, "has_audio": True, "media_type": "video"}
+
+        def get(self, file_id):
+            return {"file_id": file_id, "duration": 30.0, "has_audio": True}
+
+        def delete(self, file_id):
+            pass
+
+        def extract_audio(self, file_id, sample_rate=44100, channels=1,
+                          fmt="wav"):
+            out = Path(str(file_id) + f".{fmt}")
+            out.write_bytes(b"WAVSRC" * 100)
+            return {"file_id": str(out)}
+
+        def replace_audio(self, video_file_id, audio_file_id):
+            calls["replace_audio"].append((video_file_id, audio_file_id))
+            return {"file_id": "final_mp4", "duration": 30.0}
+
+        def download(self, file_id, dest):
+            dest = Path(dest)
+            payload = (b"MP4DATA" * 300) if "mp4" in str(file_id) else (b"WAVOUT" * 100)
+            dest.write_bytes(payload)
+            return dest
+
+    return FakeMedia(), calls
 
 
 # ------------------------------------------------------------------- tests
@@ -126,11 +157,7 @@ def test_missing_key():
 def test_audio_happy_path():
     vac, pm, prov, eng = setup_env()
     patch_store_pm(pm)
-    import services.audio.ffmpeg as ff
-    patch_ffmpeg(ff)
-    eng.validate_audio_output = lambda p, e: {"duration": e, "sample_rate": 22050}
-    eng.mux_video = lambda v, a, dest: (Path(dest).write_bytes(b"MP4"), Path(dest))[1]
-    eng.extract_audio = lambda src, dest=None: Path(str(src))
+    media, calls = make_media(None)
     import services.storage.object_store as os_mod
 
     class FakeStore:
@@ -144,8 +171,8 @@ def test_audio_happy_path():
             pass
 
     os_mod.get_object_store = lambda: FakeStore()
-    client = make_client(vac, 200, {"audio_url": "https://out.test/wav"}, b"WAVDATA")
-    e = eng.VoiceAPIVoiceConversionEngine(client=client)
+    client = make_client(vac, 200, {"audio_url": "https://out.test/wav"}, b"WAVDATA" * 100)
+    e = eng.VoiceAPIVoiceConversionEngine(client=client, media_client=media)
     result = asyncio.run(e.convert(
         "job1", GOOD_SOURCE, None, GOOD_VOICE,
         {"pitch": 2, "speed": 1.2, "stability": 0.5}, "wav"))
@@ -156,10 +183,11 @@ def test_audio_happy_path():
     assert "/v1/voice/convert" in call["url"]
     body = call["json"]
     assert body["source_language"] == "ta" and body["output_format"] == "wav"
-    s = body["settings"]
-    assert s.get("pitch_shift") == 2, s
-    assert abs(s.get("length_adjust", 1) - 1.2) < 1e-6, s
-    for fake in ("stability", "similarity", "style", "speed", "pitch"):
+    s = body.get("settings") or {}
+    # The Voice API applies its own optimal defaults — we send NO overrides.
+    assert s == {}, s
+    for fake in ("stability", "similarity", "style", "speed", "pitch",
+                 "pitch_shift", "length_adjust"):
         assert fake not in s, f"{fake} must not be sent to Voice API"
 
 
@@ -179,27 +207,16 @@ def test_video_mux_path():
             pass
 
     os_mod.get_object_store = lambda: FakeStore()
-    import services.audio.ffmpeg as ff
-    mux_calls = []
-    eng.validate_audio_output = lambda p, e: {"duration": e, "sample_rate": 44100}
+    media, mux_calls = make_media(None)
 
-    def fake_mux(v, a, dest):
-        mux_calls.append(dest)
-        Path(dest).write_bytes(b"MP4")
-        return Path(dest)
-
-    eng.extract_audio = lambda src, dest=None: Path(str(src))
-    ff.mux_video = fake_mux
-    eng.mux_video = fake_mux
-    ff.validate_audio_output = lambda p, e: {"duration": e, "sample_rate": 44100}
-
-    client = make_client(vac, 200, {"audio_url": "https://out.test/wav"}, b"WAVDATA")
-    e = eng.VoiceAPIVoiceConversionEngine(client=client)
+    client = make_client(vac, 200, {"audio_url": "https://out.test/wav"}, b"WAVDATA" * 100)
+    e = eng.VoiceAPIVoiceConversionEngine(client=client, media_client=media)
     src = dict(GOOD_SOURCE, is_video=True, storage_key="media/abc/src.mp4")
     result = asyncio.run(e.convert("job2", src, None, GOOD_VOICE, {}, "wav"))
     assert result["source_type"] == "video", result
     assert "video_url" in result, result
-    assert len(mux_calls) == 1
+    # Muxing happened INSIDE the Voice API via replace-audio, never locally.
+    assert len(mux_calls["replace_audio"]) == 1, mux_calls
 
 
 def test_error_messages():
