@@ -51,7 +51,8 @@ const Sidebar = () => {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-white/10 bg-[#0d0f14] p-4">
+      <aside className="hidden md:flex w-60 shrink-0 flex-col overflow-hidden border-r border-white/10 bg-[#0d0f14] md:sticky md:top-0 md:h-screen">
+        <div className="flex flex-1 flex-col overflow-y-auto p-4">
         <div className="flex items-center gap-2.5 px-2 pb-6 pt-1">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20">
             <AudioWaveform className="h-5 w-5 text-white" aria-hidden="true" />
@@ -62,7 +63,7 @@ const Sidebar = () => {
           </div>
         </div>
 
-        <nav aria-label="Main navigation" className="flex flex-col gap-1">
+        <nav aria-label="Main navigation" className="flex shrink-0 flex-col gap-1">
           {mainLinks.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -100,8 +101,9 @@ const Sidebar = () => {
             </div>
           ))}
         </div>
+        </div>
 
-        <div className="mt-auto flex flex-col gap-2 border-t border-white/10 pt-4">
+        <div className="shrink-0 flex flex-col gap-2 border-t border-white/10 p-4 pt-4">
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
             <div className="flex items-center justify-between text-xs">
               <span className="flex items-center gap-1.5 text-zinc-400">
