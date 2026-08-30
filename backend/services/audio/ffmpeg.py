@@ -126,12 +126,8 @@ def validate_audio_output(path: str, expected_duration: float) -> Dict[str, Any]
     p = Path(path)
     if not p.exists() or p.stat().st_size < 1024:
         raise MediaProcessingError("Converted audio is invalid.")
-    with open(p, "rb") as fh:
-        header = fh.read(12)
-    if not header.startswith(b"RIFF") or b"WAVE" not in header:
-        raise MediaProcessingError("Converted audio is invalid.")
     info = ffprobe(path)
-    if info["duration"] <= 0:
+    if not info["has_audio"] or info["duration"] <= 0:
         raise MediaProcessingError("Converted audio is invalid.")
     if expected_duration > 0:
         tolerance = max(10.0, expected_duration * (1 + MAX_LEN_TOLERANCE))
