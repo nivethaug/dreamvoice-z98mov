@@ -1,11 +1,27 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Mic2, Library, FolderKanban, Settings as SettingsIcon, AudioWaveform,
-  HelpCircle, User, ChevronRight, Youtube, Languages, Captions, FileText,
-  Sparkles
+  HelpCircle, LogOut, Youtube, Languages, Captions, FileText,
+  Sparkles, ChevronRight
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { logout } from "@/lib/backend";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getToken, logout } from "@/lib/backend";
+
+const getUserEmail = (): string => {
+  try {
+    const token = getToken();
+    if (!token) return "";
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload?.sub?.email || payload?.email || payload?.sub || "";
+  } catch {
+    return "";
+  }
+};
 
 const mainLinks = [
   { to: "/", label: "Studio", icon: AudioWaveform },
@@ -24,6 +40,14 @@ const soonLinks = [
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const email = getUserEmail();
+  const initials = (email ? String(email) : "DV")
+    .replace(/[^a-zA-Z@. ]/g, "")
+    .split(/[@\s.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0].toUpperCase())
+    .join("") || "DV";
   return (
     <>
       {/* Desktop sidebar */}
@@ -95,17 +119,36 @@ const Sidebar = () => {
               <HelpCircle className="h-4 w-4" aria-hidden="true" /> Help
             </span>
           </button>
-          <button
-            data-testid="navbar-logout-button"
-            aria-label="Log out"
-            onClick={() => { logout(); navigate("/login"); }}
-            className="flex min-h-[40px] items-center gap-3 rounded-lg px-3 text-sm text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
-          >
-            <span className="flex items-center gap-3">
-              <User className="h-4 w-4" aria-hidden="true" /> Log out
-            </span>
-            <ChevronRight className="ml-auto h-4 w-4 text-zinc-600" aria-hidden="true" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                data-testid="navbar-avatar-menu-trigger"
+                aria-label="Account menu"
+                className="flex min-h-[44px] w-full items-center gap-3 rounded-lg px-2 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-semibold text-white">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="truncate text-left">{email || "Account"}</span>
+                <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-zinc-600" aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-56 border-white/10 bg-[#14161d] text-zinc-200">
+              <DropdownMenuLabel className="text-xs text-zinc-500">
+                {email || "Signed in"}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem
+                data-testid="navbar-avatar-logout"
+                onClick={() => { logout(); navigate("/login"); }}
+                className="flex cursor-pointer items-center gap-2 text-red-400 focus:bg-red-500/10 focus:text-red-300"
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" /> Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
 
@@ -134,7 +177,7 @@ const Sidebar = () => {
           onClick={() => { logout(); navigate("/login"); }}
           className="flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 text-[11px] text-zinc-500 transition-colors hover:text-zinc-200"
         >
-          <User className="h-5 w-5" aria-hidden="true" />
+          <LogOut className="h-5 w-5" aria-hidden="true" />
           Log out
         </button>
       </nav>
