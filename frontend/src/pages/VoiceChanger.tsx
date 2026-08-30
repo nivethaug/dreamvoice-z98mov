@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Play, Pause, Volume2, Maximize2, Mic2, Search, Plus, CheckCircle2,
   AlertTriangle, ChevronDown, RotateCcw, Download, Film, Music, Pencil, ArrowRight,
-  Loader2, X, SlidersHorizontal,
+  Loader2, X, SlidersHorizontal, Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,6 +66,7 @@ const VoiceChanger = () => {
   const [filter, setFilter] = useState<Filter>("All");
   const [sort, setSort] = useState<Sort>("Recommended");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tipsOpen, setTipsOpen] = useState(false);
   const [settings, setSettings] = useState({ ...DEFAULT_SETTINGS });
   const [error, setError] = useState("");
   const [toast, setToast] = useState<{ kind: "success" | "error"; msg: string } | null>(null);
@@ -241,6 +242,9 @@ const VoiceChanger = () => {
             <Button onClick={() => navigate("/new-project")} className="mt-1 gap-2 bg-indigo-500 text-white hover:bg-indigo-400">
               <ArrowRight className="h-4 w-4" aria-hidden="true" /> Create a Project
             </Button>
+            <p className="mt-4 max-w-md text-[11px] leading-relaxed text-zinc-500" data-testid="voice-changer-quality-hint-empty">
+              Quality tip: your audio quality matters. Clean, natural speech from a single speaker produces better voice-conversion results — avoid background noise, music, echo, clipping, and distortion. For the best voice match, use a clean 30–60 second reference recording. Source audio matters too — unclear or noisy speech can remain in the converted result.
+            </p>
           </CardContent>
         </Card>
       )}
@@ -360,6 +364,21 @@ const VoiceChanger = () => {
           <div className="space-y-6">
             <MediaPlayer media={media} label="Source media" mockConverted={false} showMeta />
 
+            {/* Source audio quality guidance */}
+            <Card className="border-white/10 bg-white/[0.03]" data-testid="voice-changer-source-quality-note">
+              <CardContent className="p-5">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+                  <Volume2 className="h-4 w-4 text-indigo-400" aria-hidden="true" /> Source audio also matters
+                </h2>
+                <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">
+                  The conversion preserves the source speech and delivery. Clear articulation and clean source audio generally produce better results.
+                </p>
+                <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">
+                  Noise, echo, mumbling, or distortion in the source may remain after voice conversion.
+                </p>
+              </CardContent>
+            </Card>
+
             {/* Original Voice card */}
             <Card className="border-white/10 bg-white/[0.03]" data-testid="voice-changer-original-voice">
               <CardContent className="p-5">
@@ -436,6 +455,9 @@ const VoiceChanger = () => {
               <CardContent className="p-5">
                 <h2 className="text-sm font-semibold text-zinc-100">Target Voice</h2>
                 <p className="mt-0.5 text-xs text-zinc-500">Choose the voice you want to use.</p>
+                <p className="mt-2 text-[11px] leading-relaxed text-indigo-300/80" data-testid="voice-changer-reference-quality-hint">
+                  Better reference audio → better voice match. Use 30–60 seconds of clean, natural speech from one speaker for the best results.
+                </p>
 
                 <div className="relative mt-4">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
@@ -514,6 +536,39 @@ const VoiceChanger = () => {
                   className="mt-4 w-full gap-1.5 border-dashed border-white/20 bg-transparent text-zinc-300 hover:border-indigo-500/40 hover:bg-indigo-500/5">
                   <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Add Voice
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* Voice Quality tips */}
+            <Card className="border-indigo-500/25 bg-indigo-500/[0.05]" data-testid="voice-changer-quality-tips">
+              <CardContent className="p-5">
+                <button type="button" aria-expanded={tipsOpen} data-testid="voice-changer-quality-tips-toggle"
+                  onClick={() => setTipsOpen(o => !o)}
+                  className="flex w-full items-center justify-between gap-2 text-left">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-indigo-200">
+                    <Info className="h-4 w-4 shrink-0" aria-hidden="true" /> Quality Tip: Your audio quality matters
+                  </span>
+                  <ChevronDown className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform ${tipsOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+                </button>
+                <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+                  Conversion quality depends heavily on your audio. Clean, natural speech from a single speaker produces better voice-conversion results.
+                </p>
+                {tipsOpen && (
+                  <div className="mt-3 space-y-3" data-testid="voice-changer-quality-tips-body">
+                    <ul className="space-y-1 text-xs text-zinc-400" aria-label="For best results">
+                      <li>✓ Use a single speaker</li>
+                      <li>✓ Record in a quiet room</li>
+                      <li>✓ Avoid music, echo and background noise</li>
+                      <li>✓ Avoid clipped or distorted audio</li>
+                      <li>✓ Use natural, varied speech</li>
+                      <li>✓ A 30–60 second reference works best</li>
+                      <li>✓ Include the speaker's natural pitch range</li>
+                    </ul>
+                    <p className="text-[11px] leading-relaxed text-zinc-500">
+                      Think of voice conversion as replacing the speaker's voice while keeping the original speech. The cleaner the original and reference recordings, the better the result. Avoid background noise, music, echo, clipping, and distortion.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

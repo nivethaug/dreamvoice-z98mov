@@ -236,6 +236,28 @@ const CreateVoice = () => {
       {/* STEP 0: Upload + details */}
       {step === 0 && (
         <div className="space-y-6">
+          {/* Reference quality guidance */}
+          <Card className="border-indigo-500/25 bg-indigo-500/[0.05]" data-testid="create-voice-quality-tips">
+            <CardContent className="p-5">
+              <h2 className="text-sm font-semibold text-indigo-200">Get the best voice match</h2>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+                The quality of your reference recording has a major impact on the converted voice.
+              </p>
+              <ul className="mt-3 grid gap-1.5 text-xs text-zinc-400 sm:grid-cols-2" aria-label="Reference recording tips">
+                <li>• One speaker only</li>
+                <li>• Quiet environment</li>
+                <li>• No music or background noise</li>
+                <li>• Minimal echo</li>
+                <li>• No clipping or distortion</li>
+                <li>• 30–60 seconds recommended</li>
+                <li className="sm:col-span-2">• Natural, expressive speech is better than a flat reading</li>
+              </ul>
+              <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
+                Your recording is the voice reference used during conversion, so its quality directly affects the result.
+              </p>
+            </CardContent>
+          </Card>
+
           <Card className="border-white/10 bg-white/[0.03]" data-testid="create-voice-upload-section">
             <CardContent className="p-6">
               <h2 className="text-sm font-semibold text-zinc-100">Upload Voice Sample</h2>
@@ -281,6 +303,16 @@ const CreateVoice = () => {
                 <p role="alert" data-testid="create-voice-error" className="mt-3 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
                   <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" /> {error}
                 </p>
+              )}
+
+              {sample && sample.quality !== "Good" && (
+                <div role="alert" data-testid="create-voice-quality-warning"
+                  className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    This recording may produce a lower-quality voice match. Try a clean 30–60 second recording with one speaker and minimal background noise.
+                  </span>
+                </div>
               )}
 
               {sample && (
