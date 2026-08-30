@@ -68,6 +68,18 @@ class Settings:
     RUNPOD_VOICE_ENDPOINT_ID: str = _get("RUNPOD_VOICE_ENDPOINT_ID")
     RUNPOD_VOICE_MODEL: str = _get("RUNPOD_VOICE_MODEL", "seed-vc")
 
+    # ---------------------------------------------------- Shared Voice API
+    # Server-side only: DreamVoice backend -> shared Voice API -> RunPod
+    # Seed-VC. The key NEVER reaches the frontend or logs.
+    voice_api_base_url: str = _get(
+        "VOICE_API_BASE_URL", "https://voice-api.dreamagent.cloud"
+    )
+    voice_api_key: str = _get("VOICE_API_KEY")
+    voice_api_timeout: float = float(_get("VOICE_API_TIMEOUT", "600"))
+    public_media_base_url: str = _get(
+        "PUBLIC_MEDIA_BASE_URL", "https://dreamvoice-z98mov-api.dreamagent.cloud"
+    )
+
     # Legacy generic remote VC endpoint (kept for compatibility).
     VOICE_CONVERSION_API_URL: str = _get("VOICE_CONVERSION_API_URL")
     VOICE_CONVERSION_API_KEY: str = _get("VOICE_CONVERSION_API_KEY")

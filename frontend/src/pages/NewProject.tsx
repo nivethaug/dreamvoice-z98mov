@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { projectStore } from "@/lib/projectStore";
+import { uploadSourceMedia } from "@/lib/backend";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
@@ -90,6 +91,8 @@ const NewProject = () => {
   const [toast, setToast] = useState<{ kind: "success" | "error"; msg: string } | null>(null);
   const [action, setAction] = useState("change-voice");
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  const [sending, setSending] = useState(false);
+  const rawFileRef = useRef<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0);
 
@@ -134,6 +137,8 @@ const NewProject = () => {
       setToast({ kind: "error", msg });
       return;
     }
+    // Keep the raw File so Continue can upload it to the backend.
+    rawFileRef.current = f;
     // Simulated upload progress (local file, no backend yet)
     setUploadState("uploading");
     setProgress(0);
@@ -366,14 +371,30 @@ const NewProject = () => {
       {file && uploadState === "complete" && (
         <div className="flex justify-end">
           <Button
-            disabled={!rightsConfirmed}
+            disabled={!rightsConfirmed || sending}
             data-testid="new-project-continue-button"
-            onClick={() => {
+            onClick={async () => {
+              setError("");
+              // Upload the raw file to the backend so conversion can access it.
+              let mediaId: string | undefined;
+              if (rawFileRef.current) {
+                setSending(true);
+                try {
+                  const up = await uploadSourceMedia(rawFileRef.current);
+                  mediaId = up.media_id;
+                } catch (e) {
+                  setSending(false);
+                  setError(e instanceof Error ? e.message : "Upload failed. Please try again.");
+                  return;
+                }
+                setSending(false);
+              }
               if (file) {
                 projectStore.setMedia({
                   name: file.name, kind: file.kind, ext: file.ext, size: file.size,
                   duration: file.duration, url: file.url, thumbnail: file.thumbnail,
                   language: "English",
+                  ...(mediaId ? { mediaId } : {}),
                 });
               }
               navigate("/voice-changer");

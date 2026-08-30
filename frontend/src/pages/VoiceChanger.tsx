@@ -11,6 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { projectStore, type ProjectMedia } from "@/lib/projectStore";
 import { voiceStore } from "@/lib/voiceStore";
+import { startConversion, getJobStatus, cancelJob } from "@/lib/backend";
 
 const fmtTime = (s: number) => {
   if (!isFinite(s) || s < 0) s = 0;
@@ -21,6 +22,7 @@ const fmtTime = (s: number) => {
 interface Voice {
   id: string; name: string; desc: string; tags: string; language: string;
   personal?: boolean; addedAt: number; initials: string; hue: number;
+  authorized?: boolean; backendId?: number;
 }
 
 // Shared voice library (mock/local state via voiceStore)
@@ -34,6 +36,7 @@ const toVoice = (v: ReturnType<typeof voiceStore.getVoices>[number]): Voice => (
   id: v.id, name: v.name, desc: v.desc, tags: v.desc,
   language: v.language, personal: v.personal, addedAt: v.addedAt,
   initials: v.initials, hue: v.hue,
+  authorized: v.authorized, backendId: v.backendId,
 });
 
 const FILTERS = ["All", "My Voices", "English", "Tamil", "Hindi", "Other"] as const;
@@ -70,6 +73,13 @@ const VoiceChanger = () => {
   const [progress, setProgress] = useState(0);
   const timerRef = useRef<number | null>(null);
 
+  // Real backend job state (indeterminate — no fabricated percentage).
+  const [jobStage, setJobStage] = useState<string>("queued");
+  const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [resultIsVideo, setResultIsVideo] = useState(false);
+  const jobIdRef = useRef<string | null>(null);
+  const pollRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3000);
@@ -99,34 +109,93 @@ const VoiceChanger = () => {
     return list;
   }, [allVoices, query, filter, sort]);
 
-  const startProcessing = () => {
+  const stopPolling = () => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+  };
+
+  const startProcessing = async () => {
     if (!media) { setError("No media selected. Please go back and upload a file."); return; }
     if (!selectedVoice) { setError("Please select a target voice before generating."); setToast({ kind: "error", msg: "Please select a target voice before generating." }); return; }
+    if (!media.mediaId) {
+      setError("This media is not registered with the backend. Please upload it again from New Project.");
+      setToast({ kind: "error", msg: "Media missing — re-upload from New Project" });
+      return;
+    }
+    if (!selectedVoice.backendId) {
+      setError("This voice is not available for real conversion yet. Add an authorized voice sample first.");
+      setToast({ kind: "error", msg: "Voice not authorized for real conversion" });
+      return;
+    }
     setError("");
-    setProgress(0);
+    setResultUrl(null);
+    setResultIsVideo(false);
+    setJobStage("queued");
     setPhase("processing");
-    timerRef.current = window.setInterval(() => {
-      setProgress(p => {
-        const next = p + 1.5 + Math.random() * 2.5;
-        return next >= 100 ? 100 : next;
+    try {
+      const { job_id } = await startConversion({
+        media_id: media.mediaId,
+        voice_id: selectedVoice.backendId,
+        source_language: media.language || "English",
+        settings: { ...settings },
       });
-    }, 220);
+      jobIdRef.current = job_id;
+      pollRef.current = window.setInterval(async () => {
+        try {
+          const st = await getJobStatus(job_id);
+          if (st.stage) setJobStage(st.stage);
+          if (st.state === "completed") {
+            stopPolling();
+            const r = st.result || {};
+            const url = r.audio_url || r.video_url || null;
+            if (!url) {
+              setPhase("setup");
+              setError("Conversion finished but no output was produced. Please try again.");
+              setToast({ kind: "error", msg: "No output produced" });
+              return;
+            }
+            setResultUrl(url);
+            setResultIsVideo(!!r.is_video || !!r.video_url);
+            setPhase("complete");
+            setToast({ kind: "success", msg: "Voice conversion complete" });
+          } else if (st.state === "failed") {
+            stopPolling();
+            setPhase("setup");
+            const msg = st.error || "Voice conversion failed. Please try again.";
+            setError(msg);
+            setToast({ kind: "error", msg });
+          } else if (st.state === "cancelled") {
+            stopPolling();
+            setPhase("setup");
+            setToast({ kind: "error", msg: "Conversion cancelled" });
+          }
+        } catch (e) {
+          stopPolling();
+          setPhase("setup");
+          const msg = e instanceof Error ? e.message : "Lost contact with the conversion job.";
+          setError(msg);
+          setToast({ kind: "error", msg });
+        }
+      }, 2000);
+    } catch (e) {
+      setPhase("setup");
+      const msg = e instanceof Error ? e.message : "Could not start voice conversion.";
+      setError(msg);
+      setToast({ kind: "error", msg });
+    }
   };
 
   useEffect(() => {
-    if (phase === "processing" && progress >= 100) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      setPhase("complete");
-      setToast({ kind: "success", msg: "Voice conversion complete" });
-    }
-  }, [progress, phase]);
+    return () => { stopPolling(); };
+  }, []);
 
-  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
-
-  const cancelProcessing = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
+  const cancelProcessing = async () => {
+    stopPolling();
+    const id = jobIdRef.current;
+    if (id) { try { await cancelJob(id); } catch { /* job may already be gone */ } }
+    jobIdRef.current = null;
     setPhase("setup");
-    setProgress(0);
+    setJobStage("queued");
     setToast({ kind: "error", msg: "Conversion cancelled" });
   };
 
@@ -253,7 +322,7 @@ const VoiceChanger = () => {
               <TabsTrigger value="new" data-testid="voice-changer-tab-new">New Voice</TabsTrigger>
             </TabsList>
             <TabsContent value="original" className="mt-4"><MediaPlayer media={media} label="Original" mockConverted={false} /></TabsContent>
-            <TabsContent value="new" className="mt-4"><MediaPlayer media={media} label="New Voice" mockConverted /></TabsContent>
+            <TabsContent value="new" className="mt-4"><MediaPlayer media={media} label="New Voice" mockConverted src={resultUrl ?? undefined} srcKind={resultIsVideo ? "video" : "audio"} /></TabsContent>
           </Tabs>
 
           <Card className="border-white/10 bg-white/[0.03]">
@@ -509,9 +578,10 @@ const VoiceChanger = () => {
   );
 };
 
-/** Reusable media player card (works for both source and converted mock output). */
-const MediaPlayer = ({ media, label, mockConverted, showMeta }: {
+/** Reusable media player card (works for both source and converted output). */
+const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
   media: ProjectMedia; label: string; mockConverted: boolean; showMeta?: boolean;
+  src?: string; srcKind?: "video" | "audio";
 }) => {
   const ref = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -519,6 +589,8 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta }: {
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(media.duration);
   const [volume, setVolume] = useState(1);
+  const playUrl = src ?? media.url;
+  const playKind = srcKind ?? media.kind;
 
   const toggle = () => {
     const el = ref.current;

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { voiceStore, type Voice } from "@/lib/voiceStore";
+import { createVoice, uploadVoiceReference } from "@/lib/backend";
 
 const AUDIO_TYPES = ["audio/wav", "audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a", "audio/m4a"];
 const AUDIO_EXTS = ["wav", "mp3", "m4a"];
@@ -60,6 +61,10 @@ const CreateVoice = () => {
   const [curTime, setCurTime] = useState(0);
   const [volume, setVolume] = useState(1);
 
+  // Real backend integration state
+  const rawSampleRef = useRef<File | null>(null);
+  const [backendError, setBackendError] = useState("");
+
   const [progressPct, setProgressPct] = useState(0);
   const [createFailed, setCreateFailed] = useState(false);
   const [createdVoice, setCreatedVoice] = useState<Voice | null>(null);
@@ -98,6 +103,8 @@ const CreateVoice = () => {
       URL.revokeObjectURL(url);
       return fail("This recording is too long. Maximum sample length is 10 minutes.");
     }
+    // Keep the raw File for the backend upload on Create.
+    rawSampleRef.current = file;
     setUploading(true);
     setProgress(0);
     const iv = setInterval(() => {
@@ -138,21 +145,25 @@ const CreateVoice = () => {
     else { a.play(); setPlaying(true); }
   };
 
-  const startCreate = () => {
+  // Real backend voice creation: register voice, then upload the reference
+  // sample. The backend marks the voice authorized once the reference passes
+  // its checks (duration ≤ 10 min, valid audio).
+  const startCreate = async () => {
     setStep(2);
     setCreateFailed(false);
-    setProgressPct(0);
-    const iv = setInterval(() => {
-      setProgressPct(p => {
-        if (p >= 100) { clearInterval(iv); return 100; }
-        return Math.min(100, p + Math.random() * 7);
+    setBackendError("");
+    setProgressPct(10);
+    try {
+      if (!rawSampleRef.current) throw new Error("Voice sample missing. Please upload it again.");
+      const { voice_id } = await createVoice({
+        name: name.trim() || "My Voice",
+        description: desc.trim() || "Personal voice",
+        languages: langs,
+        voice_type: "personal",
       });
-    }, 320);
-  };
-
-  // On progress completion, create the voice
-  useEffect(() => {
-    if (step === 2 && progressPct >= 100 && !createdVoice && !createFailed) {
+      setProgressPct(45);
+      await uploadVoiceReference(voice_id, rawSampleRef.current);
+      setProgressPct(100);
       const v = voiceStore.addVoice({
         name: name.trim() || "My Voice",
         type: "Personal",
@@ -166,10 +177,14 @@ const CreateVoice = () => {
         initials: (name.trim() || "My Voice").split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase(),
         hue: 265,
       });
+      voiceStore.updateVoice(v.id, { authorized: true, backendId: voice_id });
       setCreatedVoice(v);
       setToast({ kind: "success", msg: "Voice created" });
+    } catch (err: unknown) {
+      setBackendError(err instanceof Error ? err.message : "Voice creation failed. Please try again.");
+      setCreateFailed(true);
     }
-  }, [progressPct, step, createdVoice, createFailed]);
+  };
 
   const useCreated = () => {
     if (createdVoice) voiceStore.setPendingVoiceId(createdVoice.id);

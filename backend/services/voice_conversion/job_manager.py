@@ -19,6 +19,8 @@ from .provider import (
     PROVIDER_MOCK,
     PROVIDER_OPENROUTER,
     PROVIDER_REMOTE,
+    PROVIDER_RUNPOD,
+    PROVIDER_VOICEAPI,
     ProviderConfigError,
     ProviderNotConfiguredError,
     ProviderSettings,
@@ -239,6 +241,10 @@ def build_engine_from_provider(
         from .engines.runpod_engine import RunPodVoiceConversionEngine
 
         return RunPodVoiceConversionEngine(cfg)
+    if cfg.provider == PROVIDER_VOICEAPI:
+        from .engines.voice_api_engine import VoiceAPIVoiceConversionEngine
+
+        return VoiceAPIVoiceConversionEngine(cfg)
     raise ProviderConfigError(
         f"Invalid VOICE_CONVERSION_PROVIDER '{cfg.provider}'."
     )

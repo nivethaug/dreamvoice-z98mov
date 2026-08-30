@@ -18,7 +18,8 @@
         "BACKEND_HOST": "0.0.0.0",
         "BACKEND_PORT": "8017",
         "PROJECT_NAME": "dreamvoice-z98mov",
-        "DATABASE_URL": "postgresql://dreamvoice_z98mov_user:FKwBq0AmcrFcOiiFINbtbu9O3bg7axWE@localhost:5432/dreamvoice_z98mov_db"
+        "DATABASE_URL": "postgresql://dreamvoice_z98mov_user:FKwBq0AmcrFcOiiFINbtbu9O3bg7axWE@localhost:5432/dreamvoice_z98mov_db",
+        "VOICE_API_KEY": "8mhX_e1o8wbZ8w20p5Z7Jm0xN-0Zga30BZbdTy0Bhfs"
       }
     }
   ]

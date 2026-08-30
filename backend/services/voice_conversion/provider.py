@@ -17,16 +17,34 @@ Supported providers (VOICE_CONVERSION_PROVIDER):
 """
 import os
 
+try:
+    from pathlib import Path as _P
+
+    from dotenv import load_dotenv as _ld
+
+    for _candidate in (
+        _P(__file__).resolve().parent.parent / ".env",   # backend/.env
+        _P(__file__).resolve().parent / ".env",
+        _P.cwd() / ".env",
+    ):
+        if _candidate.is_file():
+            _ld(dotenv_path=str(_candidate))
+            break
+except ImportError:  # dotenv optional
+    pass
+
 
 PROVIDER_MOCK = "mock"
 PROVIDER_OPENROUTER = "openrouter"
 PROVIDER_REMOTE = "remote"
 PROVIDER_RUNPOD = "runpod"
+PROVIDER_VOICEAPI = "voiceapi"
 VALID_PROVIDERS = {
     PROVIDER_MOCK,
     PROVIDER_OPENROUTER,
     PROVIDER_REMOTE,
     PROVIDER_RUNPOD,
+    PROVIDER_VOICEAPI,
 }
 
 
@@ -59,6 +77,11 @@ class ProviderSettings:
         self.runpod_api_key = _get("RUNPOD_API_KEY")
         self.runpod_endpoint_id = _get("RUNPOD_VOICE_ENDPOINT_ID")
         self.runpod_model = _get("RUNPOD_VOICE_MODEL") or "seed-vc"
+        self.voice_api_key = _get("VOICE_API_KEY")
+        if not self.provider and self.voice_api_key:
+            # Default to the shared Voice API (real Seed-VC) whenever its
+            # key is configured — production never silently uses mock.
+            self.provider = PROVIDER_VOICEAPI
 
     # -- capability checks --------------------------------------------------
 
@@ -82,8 +105,11 @@ class ProviderSettings:
             missing = []
             if not self.runpod_api_key:
                 missing.append("RUNPOD_API_KEY")
-            if not self.runpod_endpoint_id:
-                missing.append("RUNPOD_VOICE_ENDPOINT_ID")
+            return missing
+        if self.provider == PROVIDER_VOICEAPI:
+            missing = []
+            if not self.voice_api_key:
+                missing.append("VOICE_API_KEY")
             return missing
         return []
 
@@ -124,7 +150,8 @@ class ProviderSettings:
             "provider": self.provider or None,
             "real_conversion_available": configured
             and self.provider
-            in (PROVIDER_OPENROUTER, PROVIDER_REMOTE, PROVIDER_RUNPOD),
+            in (PROVIDER_OPENROUTER, PROVIDER_REMOTE, PROVIDER_RUNPOD,
+                PROVIDER_VOICEAPI),
             "error": error,
         }
 
