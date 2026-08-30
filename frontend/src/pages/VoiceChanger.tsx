@@ -10,8 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { projectStore, type ProjectMedia } from "@/lib/projectStore";
-import { voiceStore } from "@/lib/voiceStore";
-import { startConversion, getJobStatus, cancelJob } from "@/lib/backend";
+import { startConversion, getJobStatus, cancelJob, listVoices, type BackendVoice } from "@/lib/backend";
 
 const fmtTime = (s: number) => {
   if (!isFinite(s) || s < 0) s = 0;
@@ -25,19 +24,36 @@ interface Voice {
   authorized?: boolean; backendId?: number;
 }
 
-// Shared voice library (mock/local state via voiceStore)
-const useAllVoices = (): Voice[] => {
-  const [voices, setVoices] = useState<Voice[]>(() => voiceStore.getVoices().map(toVoice));
-  useEffect(() => voiceStore.subscribe(() => setVoices(voiceStore.getVoices().map(toVoice))), []);
-  return voices;
+// Voice library loaded from the backend API (real voices only)
+const useAllVoices = (): { voices: Voice[]; loading: boolean; reload: () => void } => {
+  const [voices, setVoices] = useState<Voice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tick, setTick] = useState(0);
+  const reload = () => setTick(t => t + 1);
+  useEffect(() => {
+    let alive = true;
+    listVoices()
+      .then(list => { if (alive) setVoices(list.map(toVoice)); })
+      .catch(() => { if (alive) setVoices([]); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [tick]);
+  return { voices, loading, reload };
 };
 
-const toVoice = (v: ReturnType<typeof voiceStore.getVoices>[number]): Voice => ({
-  id: v.id, name: v.name, desc: v.desc, tags: v.desc,
-  language: v.language, personal: v.personal, addedAt: v.addedAt,
-  initials: v.initials, hue: v.hue,
-  authorized: v.authorized, backendId: v.backendId,
-});
+const toVoice = (v: BackendVoice): Voice => {
+  const id = String(v.voice_id);
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % 360;
+  const initials = v.name.trim().split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "V";
+  return {
+    id, name: v.name, desc: v.description || "",
+    tags: (v.languages || []).join(", "), language: (v.languages || [])[0] || "Other",
+    personal: true, addedAt: v.created_at ? Date.parse(v.created_at) || 0 : 0,
+    initials, hue: hash,
+    authorized: v.authorized, backendId: v.voice_id,
+  };
+};
 
 const FILTERS = ["All", "My Voices", "English", "Tamil", "Hindi", "Other"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -87,26 +103,23 @@ const VoiceChanger = () => {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const allVoices = useAllVoices();
+  const { voices: allVoices, loading: voicesLoading } = useAllVoices();
 
-  // Preselect pending voice (e.g. "Use Voice" from My Voices)
+  // Preselect pending voice (e.g. "Use Voice" from My Voices — backend voice id)
   useEffect(() => {
-    let id = voiceStore.getPendingVoiceId();
-    if (!id) {
-      // Handoff from My Voices page (API voice id)
-      try {
-        const bId = localStorage.getItem("dreamvoice_pending_voice_id");
-        if (bId) {
-          id = voiceStore.getVoices().find(v => String(v.backendId) === bId)?.id ?? null;
-          localStorage.removeItem("dreamvoice_pending_voice_id");
-        }
-      } catch { /* noop */ }
-    }
+    if (voicesLoading) return;
+    let id: string | null = null;
+    try {
+      const bId = localStorage.getItem("dreamvoice_pending_voice_id");
+      if (bId) {
+        id = bId;
+        localStorage.removeItem("dreamvoice_pending_voice_id");
+      }
+    } catch { /* noop */ }
     if (!id) return;
-    const v = allVoices.find(x => x.id === id);
+    const v = allVoices.find(x => String(x.backendId) === id);
     if (v) setSelectedVoice(v);
-    voiceStore.setPendingVoiceId(null);
-  }, [allVoices]);
+  }, [allVoices, voicesLoading]);
 
   const voices = useMemo(() => {
     let list = allVoices.filter(v =>

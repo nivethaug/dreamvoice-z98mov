@@ -6,6 +6,9 @@ import {
   Menu,
   X,
   ChevronLeft,
+  FolderKanban,
+  LayoutDashboard,
+  Settings,
 } from 'lucide-react';
 import {
   DropdownMenu,
