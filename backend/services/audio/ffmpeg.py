@@ -121,18 +121,79 @@ def _validate_muxed(path: str, reference: str) -> None:
         raise MediaProcessingError("Final video duration is unexpected.")
 
 
+def _probe_wav(path: str) -> Optional[Dict[str, Any]]:
+    """Parse a RIFF/WAVE header directly (no ffprobe dependency).
+
+    Returns {duration, has_audio, sample_rate, size_bytes} or None if the
+    file is not a parseable WAV.
+    """
+    try:
+        with open(path, "rb") as f:
+            head = f.read(4096)
+        if len(head) < 44 or head[0:4] != b"RIFF" or head[8:12] != b"WAVE":
+            return None
+        # Walk chunks to find fmt and data
+        pos = 12
+        fmt = {}
+        data_size = None
+        while pos + 8 <= len(head):
+            cid = head[pos:pos + 4]
+            csz = int.from_bytes(head[pos + 4:pos + 8], "little")
+            if cid == b"fmt " and pos + 8 + 16 <= len(head):
+                b = head[pos + 8:]
+                fmt = {
+                    "channels": int.from_bytes(b[2:4], "little"),
+                    "sample_rate": int.from_bytes(b[4:8], "little"),
+                    "bits": int.from_bytes(b[14:16], "little"),
+                }
+            if cid == b"data":
+                data_size = csz
+                if fmt:
+                    break
+                # fmt may come after data is announced — keep scanning
+            pos += 8 + csz + (csz & 1)
+        if not fmt or not data_size:
+            return None
+        bytes_per_frame = fmt["channels"] * (fmt["bits"] // 8)
+        if bytes_per_frame <= 0 or fmt["sample_rate"] <= 0:
+            return None
+        duration = data_size / bytes_per_frame / fmt["sample_rate"]
+        return {
+            "duration": duration,
+            "format_name": "wav",
+            "has_audio": True,
+            "has_video": False,
+            "size_bytes": Path(path).stat().st_size,
+            "sample_rate": fmt["sample_rate"],
+        }
+    except (OSError, ValueError, ZeroDivisionError):
+        return None
+
+
 def validate_audio_output(path: str, expected_duration: float) -> Dict[str, Any]:
-    """Validate converted audio: WAV header (RIFF), size, duration tolerance."""
+    """Validate converted audio: real audio content + duration tolerance.
+
+    WAV files are validated by parsing the header directly (ffprobe is not
+    required); other formats fall back to ffprobe.
+    """
     p = Path(path)
     if not p.exists() or p.stat().st_size < 1024:
         raise MediaProcessingError("Converted audio is invalid.")
-    info = ffprobe(path)
-    if not info["has_audio"] or info["duration"] <= 0:
-        raise MediaProcessingError("Converted audio is invalid.")
+    info = _probe_wav(path)
+    if info is None:
+        info = ffprobe(path)
+    if not info.get("has_audio") or info.get("duration", 0) <= 0:
+        raise MediaProcessingError(
+            f"Converted audio is invalid. (probe={info!r}, "
+            f"file={p.name}, size={p.stat().st_size}, "
+            f"head={p.read_bytes()[:16]!r})")
     if expected_duration > 0:
         tolerance = max(10.0, expected_duration * (1 + MAX_LEN_TOLERANCE))
         if info["duration"] > tolerance:
-            raise MediaProcessingError("Converted audio is invalid.")
+            raise MediaProcessingError(
+                f"Converted audio is invalid. (duration={info['duration']:.1f}s "
+                f"exceeds tolerance {tolerance:.1f}s for expected "
+                f"{expected_duration:.1f}s)")
     return info
 
 
