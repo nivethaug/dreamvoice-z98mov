@@ -516,7 +516,7 @@ async def list_jobs(
             "error": row.error,
             "voice_name": meta.get("voice_name"),
             "voice_id": row.target_voice_id,
-            "language": row.language,
+            "language": row.source_language,
             "is_video": bool(meta.get("is_video")),
             "duration_seconds": meta.get("duration_seconds"),
             "output_format": meta.get("output_format"),
