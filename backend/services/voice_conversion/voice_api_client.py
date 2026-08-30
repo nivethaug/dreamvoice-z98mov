@@ -141,6 +141,15 @@ class VoiceApiClient:
             except ValueError:
                 raise VoiceApiError(DEFAULT_ERROR, status=502, retryable=True)
 
+        # Diagnostic only: status + truncated response body (never headers/secrets).
+        if resp.status_code != 200:
+            try:
+                body = resp.text[:300]
+            except Exception:  # noqa: BLE001
+                body = "<unreadable>"
+            logger.warning("voice-api error status=%s body=%s",
+                           resp.status_code, body)
+
         # Map provider status to user-friendly message.
         if resp.status_code in (429, 500, 502, 503, 504):
             msg = ERROR_MESSAGES.get(resp.status_code, DEFAULT_ERROR)

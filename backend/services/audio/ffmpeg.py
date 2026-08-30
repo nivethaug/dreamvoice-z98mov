@@ -6,6 +6,7 @@ processing stays on CPU — GPU inference remains on RunPod via the Voice API.
 from __future__ import annotations
 
 import json
+import os
 import subprocess  # noqa: S404 - controlled ffmpeg/ffprobe invocations
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -15,7 +16,20 @@ class MediaProcessingError(Exception):
     pass
 
 
+_BIN_DIR = Path(__file__).resolve().parents[2] / "bin"
+
+
+def _tool(name: str) -> str:
+    """Resolve ffmpeg/ffprobe: bundled static binary first, then PATH."""
+    bundled = _BIN_DIR / name
+    if bundled.is_file() and os.access(bundled, os.X_OK):
+        return str(bundled)
+    return name
+
+
 def _run(cmd: list, timeout: int = 900) -> subprocess.CompletedProcess:
+    if cmd and cmd[0] in ("ffmpeg", "ffprobe"):
+        cmd = [_tool(cmd[0])] + cmd[1:]
     try:
         proc = subprocess.run(  # noqa: S603
             cmd, capture_output=True, text=True, timeout=timeout

@@ -134,6 +134,10 @@ class VoiceConversionJobManager:
             raise JobNotFoundError(f"Job '{job_id}' not found.")
         return job
 
+    def list_jobs(self) -> list:
+        """All tracked job records (for duplicate-in-flight checks etc.)."""
+        return list(self._jobs.values())
+
     async def cancel_job(self, job_id: str) -> Dict[str, Any]:
         job = self.get_job(job_id)
         if job["state"] in TERMINAL_STATES:

@@ -74,7 +74,7 @@ def _public_base() -> str:
 
 def random_key(prefix: str, ext: str) -> str:
     """Unpredictable storage key; extension restricted to allow-list."""
-    allowed = {"mp4", "mov", "mp3", "wav", "m4a"}
+    allowed = {"mp4", "mov", "mp3", "wav", "m4a", "ogg", "oga"}
     ext = ext.lower().lstrip(".")
     if ext not in allowed:
         ext = "bin"
@@ -110,11 +110,16 @@ def store_media(local_path: str, prefix: str, ext: str) -> Dict[str, Any]:
 def read_media(key: str) -> Optional[bytes]:
     """Read back a stored media object (used by the temp-serving route)."""
     store = get_object_store()
-    # traversal-safe: random_key only ever produces prefix/hex.ext
-    if "/" not in key or ".." in key:
+    # traversal-safe: keys are prefix/<uuid>/<safe-name.ext>
+    if ".." in key or key.startswith("/") or not key.strip():
         return None
-    prefix, name = key.split("/", 1)
-    if not name or not all(c in "0123456789abcdef." for c in name):
+    parts = key.split("/")
+    if not 2 <= len(parts) <= 4:
+        return None
+    allowed_ext = (".mp3", ".wav", ".m4a", ".mp4", ".mov", ".ogg", ".oga")
+    if not parts[-1].lower().endswith(allowed_ext):
+        return None
+    if any(not p for p in parts):
         return None
     try:
         import tempfile

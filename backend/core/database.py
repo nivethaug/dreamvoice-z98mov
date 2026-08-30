@@ -30,5 +30,17 @@ def get_db():
 
 
 def init_db():
-    """Initialize database tables."""
+    """Initialize database tables (create_all + idempotent column additions)."""
     Base.metadata.create_all(bind=engine)
+    # Idempotent migrations for columns added after initial deployment.
+    from sqlalchemy import text
+    migrations = (
+        "ALTER TABLE voices ADD COLUMN IF NOT EXISTS rights_confirmed_at TIMESTAMPTZ",
+        "ALTER TABLE voices ADD COLUMN IF NOT EXISTS reference_duration_seconds INTEGER",
+    )
+    try:
+        with engine.begin() as conn:
+            for stmt in migrations:
+                conn.execute(text(stmt))
+    except Exception as exc:  # noqa: BLE001 - startup migration is best-effort
+        print(f"⚠️ startup migration skipped: {exc}")

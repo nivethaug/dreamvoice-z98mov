@@ -19,6 +19,8 @@ class Voice(Base):
     voice_type = Column(String(50))  # personal|professional|narrator|character|other|ai
     sample_storage_key = Column(String(1024))  # authorized reference sample
     authorization_status = Column(String(50), default="pending")  # pending|confirmed|revoked
+    rights_confirmed_at = Column(DateTime(timezone=True))  # server-side rights confirmation
+    reference_duration_seconds = Column(Integer)  # reference audio duration (<=600s)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

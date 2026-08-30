@@ -40,8 +40,8 @@ from services.voice_conversion.provider import ProviderNotConfiguredError
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/voice-changer", tags=["voice-changer"])
 
-ALLOWED_SOURCE_EXT = {".mp4", ".mov", ".mp3", ".wav", ".m4a"}
-ALLOWED_REF_EXT = {".wav", ".mp3", ".m4a"}
+ALLOWED_SOURCE_EXT = {".mp4", ".mov", ".mp3", ".wav", ".m4a", ".ogg", ".oga"}
+ALLOWED_REF_EXT = {".wav", ".mp3", ".m4a", ".ogg", ".oga"}
 MAX_SOURCE_BYTES = 500 * 1024 * 1024   # 500MB video (matches frontend)
 MAX_AUDIO_BYTES = 100 * 1024 * 1024    # 100MB audio (matches frontend)
 MAX_SOURCE_DURATION = 30 * 60          # Voice API contract: 30 minutes
@@ -323,8 +323,9 @@ async def start_conversion(
     The frontend polls GET /api/voice-changer/jobs/{job_id}."""
     user = _auth(authorization, db)
 
-    st = provider_status().get("voice_conversion", {})
-    if not st.get("configured"):
+    st = provider_status()
+    vc = st.get("voice_conversion") or st  # support flat or nested shape
+    if not vc.get("configured"):
         raise HTTPException(status_code=503, detail="Voice conversion is not configured yet.")
 
     # ---- duplicate submission protection (per user) ----
@@ -366,10 +367,28 @@ async def start_conversion(
         shutil.rmtree(tmpdir, ignore_errors=True)
 
     # ---- source metadata for the engine ----
+    # Probe durations (cost protection happens in engine.validate, but the
+    # engine needs the numbers, so we ffprobe the stored source here).
+    src_meta = store.metadata(req.media_id) or {}
+    src_duration = float(src_meta.get("duration_seconds") or src_meta.get("duration") or 0)
+    if src_duration <= 0:
+        tmpdir2 = tempfile.mkdtemp(prefix="dvsrc_")
+        try:
+            src_local = os.path.join(tmpdir2, "src_probe")
+            store.download(req.media_id, src_local)
+            try:
+                info = ffprobe(src_local)
+                src_duration = float(info.get("duration") or 0)
+            except MediaProcessingError:
+                src_duration = 0.0
+        finally:
+            import shutil
+            shutil.rmtree(tmpdir2, ignore_errors=True)
     media = {
         "storage_key": req.media_id,
         "is_video": os.path.splitext(req.media_id)[1].lower() in VIDEO_EXT,
         "user_id": user.id,
+        "duration_seconds": src_duration,
     }
     target_voice = {
         "voice_id": voice.id,
@@ -377,6 +396,7 @@ async def start_conversion(
         "language": req.source_language,
         "authorized": True,
         "reference_sample_url": ref_url,
+        "reference_duration_seconds": float(voice.reference_duration_seconds or 0),
         "sample_storage_key": voice.sample_storage_key,
     }
     settings_map = req.settings or {}
@@ -460,7 +480,7 @@ async def cancel_job(
 temp_media_router = APIRouter(prefix="/api/media", tags=["media"])
 
 
-@temp_media_router.get("/temp/{token}")
+@temp_media_router.api_route("/temp/{token}", methods=["GET", "HEAD"])
 async def serve_temp_media(token: str):
     """HMAC-signed, expiring object serving for the local storage provider.
 

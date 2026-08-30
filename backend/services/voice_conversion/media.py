@@ -23,6 +23,17 @@ REASSEMBLY_ARGS = [
 ]
 
 
+
+_BIN_DIR = __import__("pathlib").Path(__file__).resolve().parents[2] / "bin"
+
+
+def _tool(name: str) -> str:
+    """Resolve ffmpeg/ffprobe: bundled static binary first, then PATH."""
+    bundled = _BIN_DIR / name
+    if bundled.is_file() and os.access(bundled, os.X_OK):
+        return str(bundled)
+    return name
+
 class MediaValidationError(Exception):
     pass
 
@@ -60,7 +71,7 @@ async def extract_audio(source_path: str) -> str:
 
     register_temp_file(out_path)
     cmd = [
-        "ffmpeg", "-y", "-i", source_path,
+        _tool("ffmpeg"), "-y", "-i", source_path,
         "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "1",
         out_path,
     ]
@@ -93,4 +104,4 @@ async def extract_audio(source_path: str) -> str:
 def reassembly_command(video_path: str, audio_path: str, out_path: str) -> list:
     """Build the FFmpeg command that combines original video with converted
     audio, preserving original resolution and frame rate (next step)."""
-    return ["ffmpeg", "-y", "-i", video_path, "-i", audio_path, *REASSEMBLY_ARGS, out_path]
+    return [_tool("ffmpeg"), "-y", "-i", video_path, "-i", audio_path, *REASSEMBLY_ARGS, out_path]
