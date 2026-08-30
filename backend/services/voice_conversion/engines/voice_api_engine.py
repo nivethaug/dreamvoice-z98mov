@@ -36,7 +36,6 @@ from ..voice_api_client import (
     VoiceApiClient,
     VoiceApiError,
     get_voice_api_client,
-    sanitize_settings,
 )
 from .base import EngineError, EngineValidationError, VoiceConversionEngine
 
@@ -160,13 +159,10 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
             # ---- call the shared Voice API (long, indeterminate) ----
             report("Converting voice", "processing", 45)
             lang = target_voice.get("language") or "ta"
-            settings_out = self._map_ui_settings(settings)
-            # Defaults that maximize target-voice similarity: match the
-            # target's pitch automatically and use high timbre adherence.
-            settings_out.setdefault("f0_condition", True)
-            settings_out.setdefault("auto_f0_adjust", True)
-            settings_out.setdefault("inference_cfg_rate", 0.8)
-            settings_out.setdefault("diffusion_steps", 40)
+            # The Voice API applies its own optimal defaults for pitch,
+            # speed and voice similarity — we send NO overrides so the
+            # target voice conversion is handled entirely by the API.
+            settings_out: Dict[str, Any] = {}
             convert_task = asyncio.create_task(self._client.convert(
                 source_audio_url=pub["public_url"],
                 target_voice_url=target_voice["reference_sample_url"],
@@ -257,38 +253,6 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
         finally:
             self._pending.pop(job_id, None)
             _safe_rmtree(tmpdir)
-
-    @staticmethod
-    def _map_ui_settings(ui: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Map legitimate UI controls to Seed-VC params.
-
-        pitch  -> pitch_shift (semitones, -12..12)
-        speed  -> length_adjust (0.5..2.0)
-        stability/similarity/style have NO Seed-VC equivalent -> never sent.
-        """
-        if not ui:
-            return {}
-        out = dict(ui)
-        # UI sends 0-100 sliders: pitch 50 = neutral, speed 100 = neutral.
-        # Map to Seed-VC ranges: pitch_shift -12..12 semitones,
-        # length_adjust 0.5..2.0 (log scale around 1.0).
-        try:
-            pitch = float(ui["pitch"])
-            if 0 <= pitch <= 100:
-                out["pitch_shift"] = round((pitch - 50) / 50.0 * 12.0, 2)
-            else:  # already a semitone value
-                out["pitch_shift"] = max(-12.0, min(12.0, pitch))
-        except (TypeError, ValueError, KeyError):
-            pass
-        try:
-            speed = float(ui["speed"])
-            if 0 <= speed <= 100:
-                out["length_adjust"] = round(2.0 ** ((speed - 100) / 100.0), 3)
-            else:  # already a ratio
-                out["length_adjust"] = max(0.5, min(2.0, speed))
-        except (TypeError, ValueError, KeyError):
-            pass
-        return sanitize_settings(out)
 
     # --------------------------------------------------------------- cancel
     async def cancel(self, job_id: str) -> None:
