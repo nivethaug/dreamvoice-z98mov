@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,13 +16,36 @@ import Publish from "./pages/Publish";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import { isLoggedIn } from "./lib/backend";
+import { isLoggedIn, getCurrentUser, clearToken } from "./lib/backend";
 import { Navigate } from "react-router-dom";
 
 const queryClient = new QueryClient();
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
-  return isLoggedIn() ? children : <Navigate to="/login" replace />;
+  const [state, setState] = useState<"checking" | "ok" | "deny">(
+    isLoggedIn() ? "checking" : "deny"
+  );
+
+  useEffect(() => {
+    let alive = true;
+    getCurrentUser()
+      .then((user) => {
+        if (!alive) return;
+        if (user) setState("ok");
+        else {
+          clearToken();
+          setState("deny");
+        }
+      })
+      .catch(() => alive && setState("deny"));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (state === "checking") return <div className="p-6">Loading...</div>;
+  if (state === "deny") return <Navigate to="/login" replace />;
+  return children;
 }
 
 const App = () => (
