@@ -161,6 +161,12 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
             report("Converting voice", "processing", 45)
             lang = target_voice.get("language") or "ta"
             settings_out = self._map_ui_settings(settings)
+            # Defaults that maximize target-voice similarity: match the
+            # target's pitch automatically and use high timbre adherence.
+            settings_out.setdefault("f0_condition", True)
+            settings_out.setdefault("auto_f0_adjust", True)
+            settings_out.setdefault("inference_cfg_rate", 0.8)
+            settings_out.setdefault("diffusion_steps", 40)
             convert_task = asyncio.create_task(self._client.convert(
                 source_audio_url=pub["public_url"],
                 target_voice_url=target_voice["reference_sample_url"],
@@ -263,16 +269,25 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
         if not ui:
             return {}
         out = dict(ui)
-        if ui.get("pitch") is not None:
-            try:
-                out["pitch_shift"] = max(-12.0, min(12.0, float(ui["pitch"])))
-            except (TypeError, ValueError):
-                pass
-        if ui.get("speed") is not None:
-            try:
-                out["length_adjust"] = max(0.5, min(2.0, float(ui["speed"])))
-            except (TypeError, ValueError):
-                pass
+        # UI sends 0-100 sliders: pitch 50 = neutral, speed 100 = neutral.
+        # Map to Seed-VC ranges: pitch_shift -12..12 semitones,
+        # length_adjust 0.5..2.0 (log scale around 1.0).
+        try:
+            pitch = float(ui["pitch"])
+            if 0 <= pitch <= 100:
+                out["pitch_shift"] = round((pitch - 50) / 50.0 * 12.0, 2)
+            else:  # already a semitone value
+                out["pitch_shift"] = max(-12.0, min(12.0, pitch))
+        except (TypeError, ValueError, KeyError):
+            pass
+        try:
+            speed = float(ui["speed"])
+            if 0 <= speed <= 100:
+                out["length_adjust"] = round(2.0 ** ((speed - 100) / 100.0), 3)
+            else:  # already a ratio
+                out["length_adjust"] = max(0.5, min(2.0, speed))
+        except (TypeError, ValueError, KeyError):
+            pass
         return sanitize_settings(out)
 
     # --------------------------------------------------------------- cancel
