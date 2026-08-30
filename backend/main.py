@@ -35,7 +35,13 @@ async def lifespan(app: FastAPI):
         AuthService.ensure_default_user(db)
     finally:
         db.close()
-    
+
+    # Fail jobs orphaned by a restart (in-memory jobs are gone forever)
+    from services.voice_conversion.job_manager import mark_interrupted_jobs
+    n = mark_interrupted_jobs()
+    if n:
+        print(f"⚠️  Marked {n} interrupted job(s) as failed after restart.")
+
     print(f"🚀 {settings.PROJECT_NAME} is ready!")
     yield
     # Cancel in-flight voice conversion jobs + clean temp files on shutdown

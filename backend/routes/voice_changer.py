@@ -26,6 +26,7 @@ from services.auth_service import AuthService
 from services.storage.object_store import StorageError, get_object_store, make_key
 from services.storage.public_media import (
     delete_media,
+    download_media_file,
     read_media,
     store_media,
     verify_media_token,
@@ -64,6 +65,32 @@ def _auth(authorization: Optional[str], db: Session):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
     return user
+
+
+def _job_from_db(db, job_id: str, user_id):
+    """Load a persisted job (post-restart fallback for job status)."""
+    import json as _json
+    try:
+        row = db.query(VoiceJobModel).filter(VoiceJobModel.id == job_id).first()
+    except Exception:
+        return None
+    if not row or (row.user_id and row.user_id != user_id):
+        return None
+    try:
+        meta = _json.loads(row.result_metadata or "{}")
+    except Exception:
+        meta = {}
+    return {
+        "job_id": row.id,
+        "state": row.status,
+        "stage": row.stage,
+        "progress": row.progress,
+        "error": row.error,
+        "user_id": row.user_id,
+        "result": meta.get("result"),
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }
 
 
 # --------------------------------------------------------------- status
@@ -616,7 +643,11 @@ async def get_job_status(
     try:
         job = job_manager.get_job(job_id)
     except Exception:
-        raise HTTPException(status_code=404, detail="Job not found.")
+        # After a restart the in-memory job is gone — fall back to the DB
+        # record (startup marks interrupted jobs as failed).
+        job = _job_from_db(db, job_id, user.id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="Job not found.")
     owner = job.get("user_id") or job.get("request", {}).get("user_id")
     if owner and owner != user.id:
         raise HTTPException(status_code=404, detail="Job not found.")
@@ -670,17 +701,33 @@ async def serve_temp_media(token: str, filename: str = ""):
     key = verify_media_token(token)
     if not key:
         raise HTTPException(status_code=404, detail="Not found")
-    data = read_media(key)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Not found")
     ext = os.path.splitext(key)[1].lower().lstrip(".")
     media_types = {
         "mp4": "video/mp4", "mov": "video/quicktime",
         "mp3": "audio/mpeg", "wav": "audio/wav", "m4a": "audio/mp4",
     }
-    return Response(
-        content=data,
-        media_type=media_types.get(ext, "application/octet-stream"),
+    media_type = media_types.get(ext, "application/octet-stream")
+
+    # Stream large media from disk — never buffer whole files in RAM
+    # (an 11-min WAV is ~58MB; whole-file buffering OOM-killed the process).
+    import tempfile as _tempfile
+    from fastapi.responses import FileResponse as _FileResponse
+    fd, tmp_path = _tempfile.mkstemp(suffix="." + ext if ext else "")
+    os.close(fd)
+    try:
+        ok = download_media_file(key, tmp_path)
+    except Exception:
+        ok = False
+    if not ok:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        raise HTTPException(status_code=404, detail="Not found")
+    # FileResponse streams in chunks and removes the temp file after send.
+    return _FileResponse(
+        tmp_path,
+        media_type=media_type,
         headers={"Cache-Control": "private, max-age=600"},
     )
 

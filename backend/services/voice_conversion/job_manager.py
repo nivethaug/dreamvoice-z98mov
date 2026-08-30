@@ -351,3 +351,36 @@ def delete_job(job_id: str) -> Optional[Dict[str, Any]]:
     except Exception:
         pass
     return job
+
+
+def mark_interrupted_jobs() -> int:
+    """On startup: fail jobs that were RUNNING before a restart.
+
+    In-memory jobs are lost on restart, so any DB job stuck in a non-terminal
+    state can never complete. Mark it failed so the UI stops polling forever.
+    """
+    n = 0
+    try:
+        from core.database import SessionLocal
+        from models.job import VoiceJob
+    except Exception:
+        return 0
+    try:
+        session = SessionLocal()
+        try:
+            rows = session.query(VoiceJob).filter(
+                VoiceJob.status.notin_(list(TERMINAL_STATES))
+            ).all()
+            for row in rows:
+                if row.id in job_manager._jobs:  # live again (shouldn't happen)
+                    continue
+                row.status = "failed"
+                row.error = ("The conversion was interrupted by a server "
+                             "restart. Please start it again.")
+                n += 1
+            session.commit()
+        finally:
+            session.close()
+    except Exception:
+        pass
+    return n

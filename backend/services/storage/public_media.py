@@ -110,6 +110,27 @@ def store_media(local_path: str, prefix: str, ext: str) -> Dict[str, Any]:
             "size": meta.get("size", os.path.getsize(local_path))}
 
 
+def download_media_file(key: str, dest: str) -> bool:
+    """Download a stored media object to a local path (streaming, no full
+    RAM buffering). Used by the temp-serving route for large media."""
+    store = get_object_store()
+    if ".." in key or key.startswith("/") or not key.strip():
+        return False
+    parts = key.split("/")
+    if not 2 <= len(parts) <= 4:
+        return False
+    allowed_ext = (".mp3", ".wav", ".m4a", ".mp4", ".mov", ".ogg", ".oga")
+    if not parts[-1].lower().endswith(allowed_ext):
+        return False
+    if any(not p for p in parts):
+        return False
+    try:
+        store.download(key, dest)
+        return True
+    except StorageError:
+        return False
+
+
 def read_media(key: str) -> Optional[bytes]:
     """Read back a stored media object (used by the temp-serving route)."""
     store = get_object_store()
