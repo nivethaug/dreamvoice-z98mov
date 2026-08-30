@@ -64,11 +64,24 @@ class AuthService:
     
     @classmethod
     def get_user_by_token(cls, db: Session, token: str) -> User | None:
-        """Get user by token."""
+        """Get user by token.
+
+        Tokens are deterministic (token-<user_id>-<email_prefix>), so on a
+        cache miss (e.g. after a backend restart) re-derive the user from the
+        token itself instead of returning 401 for every logged-in client.
+        """
         user_id = cls.TOKENS.get(token)
+        if user_id is None and token.startswith("token-"):
+            try:
+                user_id = int(token.split("-")[1])
+            except (IndexError, ValueError):
+                return None
         if not user_id:
             return None
-        return cls.get_user_by_id(db, user_id)
+        user = cls.get_user_by_id(db, user_id)
+        if user:
+            cls.TOKENS[token] = user.id
+        return user
     
     @classmethod
     def register(cls, db: Session, email: str, password: str) -> User | None:
