@@ -441,20 +441,28 @@ async def list_jobs(
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db),
 ):
-    """List the authenticated user's conversion jobs (real job-manager records only)."""
+    """List the authenticated user's conversion jobs.
+
+    Live in-memory records are authoritative; persisted VoiceJob rows fill in
+    history that survived restarts (and anything already terminal).
+    """
+    import json as _json
+
+    from models.job import VoiceJob as VoiceJobModel
+
     user = _auth(authorization, db)
     jobs = [
         j for j in job_manager.list_jobs()
         if (j.get("user_id") or j.get("request", {}).get("user_id")) == user.id
     ]
     jobs.sort(key=lambda j: j.get("created_at") or "", reverse=True)
-    out = []
-    for j in jobs:
+
+    def _shape(j):
         req = j.get("request", {}) or {}
         tv = req.get("target_voice", {}) or {}
         sm = req.get("source_media", {}) or {}
         res = j.get("result") or {}
-        out.append({
+        return {
             "job_id": j["job_id"],
             "status": j.get("state"),
             "state": j.get("state"),
@@ -475,7 +483,53 @@ async def list_jobs(
             } if res else None,
             "created_at": j.get("created_at"),
             "updated_at": j.get("updated_at"),
+        }
+
+    out = [_shape(j) for j in jobs]
+
+    # ---- merge persisted history (survives restarts / old jobs) ----
+    seen = {o["job_id"] for o in out}
+    try:
+        rows = (
+            db.query(VoiceJobModel)
+            .filter(VoiceJobModel.user_id == user.id)
+            .order_by(VoiceJobModel.created_at.desc())
+            .limit(100)
+            .all()
+        )
+    except Exception:
+        rows = []
+    for row in rows:
+        if row.id in seen:
+            continue
+        try:
+            meta = _json.loads(row.result_metadata or "{}")
+        except Exception:
+            meta = {}
+        res = meta.get("result") or {}
+        out.append({
+            "job_id": row.id,
+            "status": row.status,
+            "state": row.status,
+            "stage": row.stage,
+            "progress": row.progress,
+            "error": row.error,
+            "voice_name": meta.get("voice_name"),
+            "voice_id": row.target_voice_id,
+            "language": row.language,
+            "is_video": bool(meta.get("is_video")),
+            "duration_seconds": meta.get("duration_seconds"),
+            "output_format": meta.get("output_format"),
+            "result": {
+                "audio_url": res.get("audio_url"),
+                "video_url": res.get("video_url"),
+                "is_video": res.get("is_video"),
+                "output_format": res.get("output_format"),
+            } if res else None,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "updated_at": row.updated_at.isoformat() if row.updated_at else None,
         })
+    out.sort(key=lambda j: j.get("created_at") or "", reverse=True)
     return {"jobs": out}
 
 

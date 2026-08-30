@@ -45,6 +45,54 @@ JOB_TTL_SECONDS = 3600
 MAX_TRACKED_JOBS = 200
 
 
+def _persist_job(job: Dict[str, Any]) -> None:
+    """Upsert a job record into the voice_jobs table (best-effort).
+
+    History survives backend restarts; the in-memory dict remains the
+    source of truth for RUNNING jobs.
+    """
+    import json as _json
+
+    try:
+        from core.database import SessionLocal
+        from models.job import VoiceJob
+    except Exception:
+        return
+    try:
+        req = job.get("request", {}) or {}
+        tv = req.get("target_voice", {}) or {}
+        sm = req.get("source_media", {}) or {}
+        res = job.get("result") or {}
+        session = SessionLocal()
+        try:
+            row = session.get(VoiceJob, job["job_id"])
+            if row is None:
+                row = VoiceJob(id=job["job_id"])
+                session.add(row)
+            row.user_id = job.get("user_id") or req.get("user_id") or 0
+            row.target_voice_id = tv.get("voice_id")
+            row.source_media_key = sm.get("storage_key")
+            row.language = tv.get("language")
+            row.provider = job.get("engine")
+            row.status = job.get("state") or "queued"
+            row.progress = float(job.get("progress") or 0)
+            row.stage = job.get("stage")
+            row.error = job.get("error")
+            row.result_storage_key = res.get("storage_key") or res.get("audio_url")
+            row.result_metadata = _json.dumps({
+                "voice_name": tv.get("voice_name"),
+                "is_video": sm.get("is_video"),
+                "duration_seconds": sm.get("duration_seconds"),
+                "output_format": req.get("output_format"),
+                "result": res,
+            })
+            session.commit()
+        finally:
+            session.close()
+    except Exception:
+        pass  # persistence must never break the running job
+
+
 class JobNotFoundError(Exception):
     pass
 
@@ -96,6 +144,7 @@ class VoiceConversionJobManager:
         now = datetime.now(timezone.utc)
         job = {
             "job_id": job_id,
+            "user_id": payload.get("user_id") or (source_media or {}).get("user_id"),
             "state": "queued",
             "progress": 0,
             "stage": None,
@@ -162,6 +211,8 @@ class VoiceConversionJobManager:
     def _set(self, job: Dict[str, Any], **fields) -> None:
         job.update(fields)
         job["updated_at"] = datetime.now(timezone.utc).isoformat()
+        if fields.get("state") in TERMINAL_STATES:
+            _persist_job(job)
 
     async def _run_job(self, job_id: str) -> None:
         job = self._jobs.get(job_id)
