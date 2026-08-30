@@ -436,6 +436,49 @@ async def start_conversion(
 
 
 # ------------------------------------------------------------------ jobs
+@router.get("/jobs")
+async def list_jobs(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    """List the authenticated user's conversion jobs (real job-manager records only)."""
+    user = _auth(authorization, db)
+    jobs = [
+        j for j in job_manager.list_jobs()
+        if (j.get("user_id") or j.get("request", {}).get("user_id")) == user.id
+    ]
+    jobs.sort(key=lambda j: j.get("created_at") or "", reverse=True)
+    out = []
+    for j in jobs:
+        req = j.get("request", {}) or {}
+        tv = req.get("target_voice", {}) or {}
+        sm = req.get("source_media", {}) or {}
+        res = j.get("result") or {}
+        out.append({
+            "job_id": j["job_id"],
+            "status": j.get("state"),
+            "state": j.get("state"),
+            "stage": j.get("stage"),
+            "progress": j.get("progress"),
+            "error": j.get("error"),
+            "voice_name": tv.get("voice_name"),
+            "voice_id": tv.get("voice_id"),
+            "language": tv.get("language") or req.get("source_language"),
+            "is_video": bool(sm.get("is_video")),
+            "duration_seconds": sm.get("duration_seconds"),
+            "output_format": req.get("output_format"),
+            "result": {
+                "audio_url": res.get("audio_url"),
+                "video_url": res.get("video_url"),
+                "is_video": res.get("is_video"),
+                "output_format": res.get("output_format"),
+            } if res else None,
+            "created_at": j.get("created_at"),
+            "updated_at": j.get("updated_at"),
+        })
+    return {"jobs": out}
+
+
 @router.get("/jobs/{job_id}")
 async def get_job_status(
     job_id: str,

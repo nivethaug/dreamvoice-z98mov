@@ -91,7 +91,17 @@ const VoiceChanger = () => {
 
   // Preselect pending voice (e.g. "Use Voice" from My Voices)
   useEffect(() => {
-    const id = voiceStore.getPendingVoiceId();
+    let id = voiceStore.getPendingVoiceId();
+    if (!id) {
+      // Handoff from My Voices page (API voice id)
+      try {
+        const bId = localStorage.getItem("dreamvoice_pending_voice_id");
+        if (bId) {
+          id = voiceStore.getVoices().find(v => String(v.backendId) === bId)?.id ?? null;
+          localStorage.removeItem("dreamvoice_pending_voice_id");
+        }
+      } catch { /* noop */ }
+    }
     if (!id) return;
     const v = allVoices.find(x => x.id === id);
     if (v) setSelectedVoice(v);
