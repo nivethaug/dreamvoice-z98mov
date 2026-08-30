@@ -2,13 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Loader2, Mic2, Languages, Clock, FolderKanban,
-  Search, CheckCircle2, AlertTriangle, RefreshCw, Play, Download,
+  Search, CheckCircle2, AlertTriangle, RefreshCw, Play, Download, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { listJobs, type JobSummary } from "@/lib/backend";
+import { deleteJob, listJobs, type JobSummary } from "@/lib/backend";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 
 const COLUMNS = ["Processing", "Ready", "Failed"] as const;
 type Column = (typeof COLUMNS)[number];
@@ -39,6 +43,8 @@ const Projects = () => {
   const [error, setError] = useState<string | null>(null);
   const [jobs, setJobs] = useState<Awaited<ReturnType<typeof listJobs>>>([]);
   const [query, setQuery] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<JobSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,6 +68,21 @@ const Projects = () => {
       (j.language || "").toLowerCase().includes(q) ||
       j.job_id.toLowerCase().includes(q));
   }, [jobs, query]);
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await deleteJob(pendingDelete.job_id);
+      setPendingDelete(null);
+      await load();
+    } catch (e: any) {
+      setError(e?.message || "Could not delete project");
+      setPendingDelete(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const byCol = useMemo(() => {
     const map: Record<Column, typeof jobs> = { Processing: [], Ready: [], Failed: [] };
@@ -172,14 +193,22 @@ const Projects = () => {
                       {col === "Failed" && j.error && (
                         <p className="line-clamp-2 text-[11px] text-red-300/80" data-testid="projects-card-error">{j.error}</p>
                       )}
-                      {col === "Ready" && j.result?.audio_url && (
-                        <Button asChild variant="secondary" size="sm" data-testid="projects-download"
-                          className="h-7 gap-1.5 bg-white/10 text-[11px] text-zinc-200 hover:bg-white/15">
-                          <a href={j.result.audio_url} target="_blank" rel="noreferrer" download>
-                            <Download className="h-3.5 w-3.5" aria-hidden="true" /> Download result
-                          </a>
+                      <div className="flex items-center justify-between gap-2">
+                        {col === "Ready" && j.result?.audio_url ? (
+                          <Button asChild variant="secondary" size="sm" data-testid="projects-download"
+                            className="h-7 gap-1.5 bg-white/10 text-[11px] text-zinc-200 hover:bg-white/15">
+                            <a href={j.result.audio_url} target="_blank" rel="noreferrer" download>
+                              <Download className="h-3.5 w-3.5" aria-hidden="true" /> Download result
+                            </a>
+                          </Button>
+                        ) : <span />}
+                        <Button variant="ghost" size="sm" aria-label={`Delete project ${j.voice_name || j.job_id}`}
+                          data-testid="projects-delete-button"
+                          onClick={() => setPendingDelete(j)}
+                          className="h-7 gap-1.5 px-2 text-[11px] text-red-300 hover:bg-red-500/15 hover:text-red-200">
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete
                         </Button>
-                      )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -188,6 +217,26 @@ const Projects = () => {
           ))}
         </div>
       )}
+
+      <Dialog open={!!pendingDelete} onOpenChange={(o) => !o && !deleting && setPendingDelete(null)}>
+        <DialogContent data-testid="projects-delete-dialog" className="border-white/10 bg-zinc-900">
+          <DialogHeader>
+            <DialogTitle>Delete this project?</DialogTitle>
+            <DialogDescription>
+              "{pendingDelete?.voice_name || "Conversion"}" will be permanently removed,
+              including its audio files. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" data-testid="projects-delete-cancel" disabled={deleting}
+              onClick={() => setPendingDelete(null)}>Cancel</Button>
+            <Button variant="destructive" data-testid="projects-delete-confirm" disabled={deleting}
+              onClick={confirmDelete}>
+              {deleting ? "Deleting…" : "Delete permanently"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

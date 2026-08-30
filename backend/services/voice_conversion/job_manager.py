@@ -329,3 +329,25 @@ __all__ = [
     "ProviderConfigError",
     "ProviderNotConfiguredError",
 ]
+
+
+def delete_job(job_id: str) -> Optional[Dict[str, Any]]:
+    """Remove a job completely: in-memory record, background task and DB row."""
+    job = job_manager._jobs.pop(job_id, None)
+    task = job_manager._tasks.pop(job_id, None)
+    if task and not task.done():
+        task.cancel()
+    try:
+        from core.database import SessionLocal
+        from models.job import VoiceJob
+        session = SessionLocal()
+        try:
+            row = session.get(VoiceJob, job_id)
+            if row:
+                session.delete(row)
+                session.commit()
+        finally:
+            session.close()
+    except Exception:
+        pass
+    return job

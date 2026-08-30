@@ -612,3 +612,74 @@ async def serve_temp_media(token: str, filename: str = ""):
         media_type=media_types.get(ext, "application/octet-stream"),
         headers={"Cache-Control": "private, max-age=600"},
     )
+
+
+@router.delete("/jobs/{job_id}")
+async def delete_job(
+    job_id: str,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    """Delete a job completely: record, DB row and all stored files."""
+    user = _auth(authorization, db)
+
+    # --- collect storage keys from the live record and/or DB row ---
+    import json as _json
+    from models.job import VoiceJob as VoiceJobModel
+    from services.voice_conversion.job_manager import (
+        JobNotFoundError as JNFE,
+        delete_job as remove_job,
+    )
+
+    keys = []
+    rec = job_manager._jobs.get(job_id)
+    if rec is not None:
+        owner = rec.get("user_id") or (rec.get("request", {}) or {}).get("user_id")
+        if owner and owner != user.id:
+            raise HTTPException(status_code=404, detail="Job not found.")
+        req = rec.get("request", {}) or {}
+        sm = req.get("source_media", {}) or {}
+        res = rec.get("result") or {}
+        keys += [sm.get("storage_key"), res.get("storage_key")]
+
+    row = db.query(VoiceJobModel).filter(VoiceJobModel.id == job_id).first()
+    if row is not None:
+        if row.user_id and row.user_id != user.id:
+            raise HTTPException(status_code=404, detail="Job not found.")
+        keys.append(row.source_media_key)
+        keys.append(row.result_storage_key)
+        try:
+            meta = _json.loads(row.result_metadata or "{}")
+            res = meta.get("result") or {}
+            keys += [res.get("storage_key"), res.get("audio_url")]
+        except Exception:
+            pass
+
+    if rec is None and row is None:
+        raise HTTPException(status_code=404, detail="Job not found.")
+
+    # --- delete stored files (best-effort) ---
+    deleted_files = 0
+    for k in {k for k in keys if k}:
+        key = k
+        # result_storage_key may hold a full URL instead of a key
+        if "://" in key:
+            from urllib.parse import urlparse
+            p = urlparse(key)
+            key = p.path.lstrip("/")
+            # strip known media prefix if present
+            for prefix in ("media/",):
+                if key.startswith(prefix):
+                    key = key[len(prefix):]
+                    break
+        try:
+            from services.storage.object_store import get_object_store
+            get_object_store().delete(key)
+            deleted_files += 1
+        except Exception:
+            pass
+
+    # --- remove memory record, background task and DB row ---
+    remove_job(job_id)
+
+    return {"deleted": True, "job_id": job_id, "files_removed": deleted_files}
