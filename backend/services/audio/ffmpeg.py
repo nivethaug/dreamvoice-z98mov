@@ -98,7 +98,7 @@ def mux_video(video_path: str, audio_path: str,
         "ffmpeg", "-y", "-i", str(src), "-i", str(audio_path),
         "-map", "0:v:0", "-map", "1:a:0",
         "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-        "-movflags", "+faststart",
+        "-movflags", "+faststart", "-shortest",
         str(out),
     ])
     if proc.returncode != 0:

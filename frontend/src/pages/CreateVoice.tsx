@@ -241,20 +241,16 @@ const CreateVoice = () => {
             <CardContent className="p-5">
               <h2 className="text-sm font-semibold text-indigo-200">Get the best voice match</h2>
               <p className="mt-1 text-xs leading-relaxed text-zinc-400">
-                The quality of your reference recording has a major impact on the converted voice.
+                Voice quality depends heavily on your recordings.
               </p>
-              <ul className="mt-3 grid gap-1.5 text-xs text-zinc-400 sm:grid-cols-2" aria-label="Reference recording tips">
-                <li>• One speaker only</li>
-                <li>• Quiet environment</li>
-                <li>• No music or background noise</li>
-                <li>• Minimal echo</li>
-                <li>• No clipping or distortion</li>
-                <li>• 30–60 seconds recommended</li>
-                <li className="sm:col-span-2">• Natural, expressive speech is better than a flat reading</li>
+              <p className="mt-2 text-xs font-medium text-zinc-300">For the best result:</p>
+              <ul className="mt-1.5 grid gap-1.5 text-xs text-zinc-400 sm:grid-cols-2" aria-label="Reference recording tips">
+                <li>• Use a clean 30–60 second target voice recording.</li>
+                <li>• Record one speaker only.</li>
+                <li>• Avoid music, echo, and background noise.</li>
+                <li>• Use natural speech with varied expression.</li>
+                <li>• Keep the source recording clear as well.</li>
               </ul>
-              <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
-                Your recording is the voice reference used during conversion, so its quality directly affects the result.
-              </p>
             </CardContent>
           </Card>
 

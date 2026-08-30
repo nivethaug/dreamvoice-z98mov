@@ -223,7 +223,11 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
                 )
                 created_keys.append(out["key"])
                 result["video_url"] = out["public_url"]
-                result["audio_url"] = out["public_url"]
+                wav_out = await asyncio.to_thread(
+                    store_media, str(converted), "voiceapi-out", "wav"
+                )
+                created_keys.append(wav_out["key"])
+                result["audio_url"] = wav_out["public_url"]
                 result["output_format"] = "mp4"
             else:
                 ext = converted.suffix.lstrip(".").lower() or "wav"

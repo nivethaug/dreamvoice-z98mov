@@ -93,6 +93,8 @@ const VoiceChanger = () => {
   // Real backend job state (indeterminate — no fabricated percentage).
   const [jobStage, setJobStage] = useState<string>("queued");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [resultAudioUrl, setResultAudioUrl] = useState<string | null>(null);
+  const [resultVideoUrl, setResultVideoUrl] = useState<string | null>(null);
   const [resultIsVideo, setResultIsVideo] = useState(false);
   const jobIdRef = useRef<string | null>(null);
   const pollRef = useRef<number | null>(null);
@@ -153,6 +155,8 @@ const VoiceChanger = () => {
     }
     setError("");
     setResultUrl(null);
+    setResultAudioUrl(null);
+    setResultVideoUrl(null);
     setResultIsVideo(false);
     setJobStage("queued");
     setPhase("processing");
@@ -179,6 +183,8 @@ const VoiceChanger = () => {
               return;
             }
             setResultUrl(url);
+            setResultAudioUrl(r.audio_url || null);
+            setResultVideoUrl(r.video_url || null);
             setResultIsVideo(!!r.is_video || !!r.video_url);
             setPhase("complete");
             setToast({ kind: "success", msg: "Voice conversion complete" });
@@ -362,13 +368,15 @@ const VoiceChanger = () => {
 
           <div className="flex flex-wrap gap-3">
             <Button className="gap-2 bg-indigo-500 text-white hover:bg-indigo-400" data-testid="voice-changer-download-audio"
-              onClick={() => { if (resultUrl) window.open(resultUrl, "_blank"); else setToast({ kind: "error", msg: "No output available." }); }}>
+              onClick={() => { const u = resultAudioUrl || resultUrl; if (u) window.open(u, "_blank"); else setToast({ kind: "error", msg: "No audio output available." }); }}>
               <Download className="h-4 w-4" aria-hidden="true" /> Download Audio
             </Button>
-            <Button variant="secondary" className="gap-2 bg-white/10 text-zinc-200 hover:bg-white/15" data-testid="voice-changer-download-video"
-              onClick={() => setToast({ kind: "success", msg: "Download Video will be available when processing is connected." })}>
-              <Film className="h-4 w-4" aria-hidden="true" /> Download Video
-            </Button>
+            {resultVideoUrl && (
+              <Button variant="secondary" className="gap-2 bg-white/10 text-zinc-200 hover:bg-white/15" data-testid="voice-changer-download-video"
+                onClick={() => { if (resultVideoUrl) window.open(resultVideoUrl, "_blank"); else setToast({ kind: "error", msg: "No video output available." }); }}>
+                <Film className="h-4 w-4" aria-hidden="true" /> Download Video
+              </Button>
+            )}
             <Button variant="secondary" className="gap-2 bg-white/10 text-zinc-200 hover:bg-white/15" onClick={() => { setPhase("setup"); setProgress(0); }}>
               <Pencil className="h-4 w-4" aria-hidden="true" /> Edit Voice
             </Button>
@@ -574,18 +582,17 @@ const VoiceChanger = () => {
                   <ChevronDown className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform ${tipsOpen ? "rotate-180" : ""}`} aria-hidden="true" />
                 </button>
                 <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                  Conversion quality depends heavily on your audio. Clean, natural speech from a single speaker produces better voice-conversion results.
+                  Voice quality depends heavily on your recordings.
                 </p>
                 {tipsOpen && (
                   <div className="mt-3 space-y-3" data-testid="voice-changer-quality-tips-body">
+                    <p className="text-xs font-medium text-zinc-300">For the best result:</p>
                     <ul className="space-y-1 text-xs text-zinc-400" aria-label="For best results">
-                      <li>✓ Use a single speaker</li>
-                      <li>✓ Record in a quiet room</li>
-                      <li>✓ Avoid music, echo and background noise</li>
-                      <li>✓ Avoid clipped or distorted audio</li>
-                      <li>✓ Use natural, varied speech</li>
-                      <li>✓ A 30–60 second reference works best</li>
-                      <li>✓ Include the speaker's natural pitch range</li>
+                      <li>• Use a clean 30–60 second target voice recording.</li>
+                      <li>• Record one speaker only.</li>
+                      <li>• Avoid music, echo, and background noise.</li>
+                      <li>• Use natural speech with varied expression.</li>
+                      <li>• Keep the source recording clear as well.</li>
                     </ul>
                     <p className="text-[11px] leading-relaxed text-zinc-500">
                       Think of voice conversion as replacing the speaker's voice while keeping the original speech. The cleaner the original and reference recordings, the better the result. Avoid background noise, music, echo, clipping, and distortion.
