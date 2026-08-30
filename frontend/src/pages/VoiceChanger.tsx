@@ -362,7 +362,7 @@ const VoiceChanger = () => {
 
           <div className="flex flex-wrap gap-3">
             <Button className="gap-2 bg-indigo-500 text-white hover:bg-indigo-400" data-testid="voice-changer-download-audio"
-              onClick={() => setToast({ kind: "success", msg: "Download Audio will be available when processing is connected." })}>
+              onClick={() => { if (resultUrl) window.open(resultUrl, "_blank"); else setToast({ kind: "error", msg: "No output available." }); }}>
               <Download className="h-4 w-4" aria-hidden="true" /> Download Audio
             </Button>
             <Button variant="secondary" className="gap-2 bg-white/10 text-zinc-200 hover:bg-white/15" data-testid="voice-changer-download-video"
@@ -682,8 +682,8 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
   return (
     <Card className="border-white/10 bg-white/[0.03]" data-testid={`voice-changer-media-${label.toLowerCase().replace(/\s+/g, "-")}`}>
       <CardContent className="space-y-4 p-4">
-        {media.kind === "video" ? (
-          <video ref={ref} src={media.url} poster={media.thumbnail}
+        {playKind === "video" ? (
+          <video ref={ref} src={playUrl} poster={playKind === "video" ? media.thumbnail : undefined}
             className="aspect-video w-full rounded-lg bg-black"
             aria-label={`${label} video preview`}
             onTimeUpdate={e => setTime(e.currentTarget.currentTime)}
@@ -698,7 +698,7 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
                   style={{ height: `${h}%` }} />
               ))}
             </div>
-            <audio ref={ref} src={media.url} aria-label={`${label} audio preview`}
+            <audio ref={ref} src={playUrl} aria-label={`${label} audio preview`}
               onTimeUpdate={e => setTime(e.currentTarget.currentTime)}
               onLoadedMetadata={e => setDuration(e.currentTarget.duration || media.duration)}
               onEnded={() => setPlaying(false)} className="hidden" />
@@ -720,7 +720,7 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
               onValueChange={([v]) => { setVolume(v); if (ref.current) ref.current.volume = v; }}
               aria-label="Volume" className="flex-1" />
           </div>
-          {media.kind === "video" && (
+          {playKind === "video" && (
             <Button variant="ghost" size="sm" aria-label="Fullscreen"
               className="h-9 w-9 shrink-0 p-0 text-zinc-400 hover:text-zinc-200"
               onClick={() => containerRef.current?.requestFullscreen?.().catch(() => {}) || ref.current?.requestFullscreen?.().catch(() => {})}>
