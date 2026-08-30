@@ -183,10 +183,20 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
             # ---- download + validate converted WAV ----
             report("Enhancing audio", "enhancing", 70)
             out_url = self._extract_output_url(api_result)
+            logger.info("job %s voice-api result: %s", job_id, api_result)
             converted = await self._client.download_output(out_url, tmpdir)
-            info = await asyncio.to_thread(
-                validate_audio_output, str(converted), src_duration
-            )
+            try:
+                info = await asyncio.to_thread(
+                    validate_audio_output, str(converted), src_duration
+                )
+            except Exception as exc:
+                logger.error(
+                    "job %s output validation failed: %s (file=%s size=%s head=%s)",
+                    job_id, exc, converted,
+                    converted.stat().st_size if converted.exists() else -1,
+                    open(converted, "rb").read(16) if converted.exists() else b"",
+                )
+                raise
 
             # ---- final output: mux video if source was video ----
             report("Finalizing", "finalizing", 90)

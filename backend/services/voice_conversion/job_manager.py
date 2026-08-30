@@ -190,10 +190,13 @@ class VoiceConversionJobManager:
             if job["state"] not in TERMINAL_STATES:
                 self._set(job, state="cancelled")
         except EngineValidationError as exc:
+            logger.error("job %s failed (validation): %s", job_id, exc, exc_info=True)
             self._set(job, state="failed", error=str(exc))
         except EngineError as exc:
+            logger.error("job %s failed (engine): %s", job_id, exc, exc_info=True)
             self._set(job, state="failed", error=str(exc))
         except Exception as exc:  # noqa: BLE001 - defensive
+            logger.error("job %s failed (unexpected): %s", job_id, exc, exc_info=True)
             self._set(job, state="failed", error=f"Unexpected error: {exc}")
         finally:
             self._tasks.pop(job_id, None)
