@@ -201,8 +201,8 @@ const NewProject = () => {
 
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100 md:text-3xl">Create Voice Project</h1>
-          <p className="mt-1 text-sm text-zinc-400">Upload your video or audio to get started.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-zinc-100 md:text-2xl">Create Voice Project</h1>
+          <p className="mt-1 text-sm text-zinc-400">Upload a video or audio file to begin.</p>
         </div>
         <Button variant="ghost" onClick={() => navigate("/")} className="w-fit text-zinc-400 hover:text-zinc-200">Back to Studio</Button>
       </header>
@@ -220,27 +220,27 @@ const NewProject = () => {
             onDragOver={e => e.preventDefault()}
             onDragLeave={e => { e.preventDefault(); if (--dragDepth.current <= 0) setDragging(false); }}
             onDrop={onDrop}
-            className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors ${
+            className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-12 text-center transition-colors ${
               dragging
-                ? "border-indigo-400 bg-indigo-500/10"
+                ? "border-zinc-300 bg-white/[0.06]"
                 : error
                   ? "border-red-500/40 bg-red-500/[0.04]"
-                  : "border-white/15 bg-white/[0.02] hover:border-indigo-500/40 hover:bg-white/[0.04]"}`}
+                  : "border-white/15 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"}`}
           >
             {uploadState === "uploading" ? (
               <>
-                <Loader2 className="h-8 w-8 animate-spin text-indigo-400" aria-hidden="true" />
+                <Loader2 className="h-7 w-7 animate-spin text-zinc-300" aria-hidden="true" />
                 <p className="font-medium text-zinc-200">Uploading…</p>
                 <div className="w-64 max-w-full"><Progress value={progress} className="h-2" /></div>
               </>
             ) : dragging ? (
               <>
-                <Upload className="h-8 w-8 text-indigo-400" aria-hidden="true" />
-                <p className="font-medium text-indigo-300">Drop your file to upload</p>
+                <Upload className="h-7 w-7 text-zinc-300" aria-hidden="true" />
+                <p className="font-medium text-zinc-100">Drop your file to upload</p>
               </>
             ) : (
               <>
-                <Upload className="h-8 w-8 text-zinc-500" aria-hidden="true" />
+                <Upload className="h-7 w-7 text-zinc-500" aria-hidden="true" />
                 <p className="font-medium text-zinc-200">Drag &amp; drop your video or audio here</p>
                 <p className="text-xs text-zinc-500">MP4 · MOV · MP3 · WAV · M4A</p>
                 <Button variant="secondary" size="sm" className="bg-white/10 text-zinc-200 hover:bg-white/15" data-testid="new-project-browse-button">
@@ -314,19 +314,19 @@ const NewProject = () => {
                   aria-pressed={selected}
                   data-testid={`new-project-action-${a.id}`}
                   onClick={() => setAction(a.id)}
-                  className={`flex h-full flex-col gap-3 rounded-xl border p-5 text-left transition-all ${
+                  className={`flex h-full flex-col gap-3 rounded-xl border p-5 text-left transition-colors ${
                     selected
-                      ? "border-indigo-500/60 bg-indigo-500/10 shadow-lg shadow-indigo-950/40"
-                      : "border-white/10 bg-white/[0.03] hover:border-indigo-500/40 hover:bg-white/[0.05]"}`}>
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                    selected ? "bg-gradient-to-br from-indigo-500/40 to-purple-500/40 text-indigo-200" : "bg-gradient-to-br from-indigo-500/25 to-purple-500/25 text-indigo-300"}`}>
+                      ? "border-zinc-300/60 bg-white/[0.06]"
+                      : "border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.05]"}`}>
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                    selected ? "bg-zinc-100 text-zinc-900" : "bg-white/[0.06] text-zinc-400"}`}>
                     <a.icon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-zinc-100">{a.title}</p>
                     <p className="mt-1 text-xs leading-relaxed text-zinc-400">{a.desc}</p>
                   </div>
-                  {selected && <span className="flex items-center gap-1 text-[11px] font-medium text-indigo-300">
+                  {selected && <span className="flex items-center gap-1 text-[11px] font-medium text-zinc-300">
                     <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Selected
                   </span>}
                 </button>
@@ -343,7 +343,7 @@ const NewProject = () => {
             <div className="flex gap-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
               <div>
-                <p className="text-xs font-semibold text-amber-300">⚠️ Voice Rights Notice</p>
+                <p className="text-xs font-semibold text-amber-300">Voice Rights Notice</p>
                 <p className="mt-1 text-xs leading-relaxed text-zinc-400">
                   Only upload or clone voices you own or have explicit permission to use. You are solely responsible for
                   voice licensing, consent, and compliance with applicable laws and third-party rights. DreamAgent does
@@ -399,7 +399,7 @@ const NewProject = () => {
               }
               navigate("/voice-changer");
             }}
-            className="gap-2 bg-indigo-500 text-white hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50">
+            className="gap-2 bg-zinc-100 text-zinc-900 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50">
             <Sparkles className="h-4 w-4" aria-hidden="true" /> Continue
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Button>
