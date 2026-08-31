@@ -220,7 +220,7 @@ const NewProject = () => {
             onDragOver={e => e.preventDefault()}
             onDragLeave={e => { e.preventDefault(); if (--dragDepth.current <= 0) setDragging(false); }}
             onDrop={onDrop}
-            className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-12 text-center transition-colors ${
+            className={`flex cursor-pointer flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed px-6 py-8 text-center transition-colors ${
               dragging
                 ? "border-zinc-300 bg-white/[0.06]"
                 : error
@@ -240,15 +240,15 @@ const NewProject = () => {
               </>
             ) : (
               <>
-                <Upload className="h-7 w-7 text-zinc-500" aria-hidden="true" />
-                <p className="font-medium text-zinc-200">Drag &amp; drop your video or audio here</p>
+                <Upload className="h-6 w-6 text-zinc-500" aria-hidden="true" />
+                <p className="text-sm font-medium text-zinc-200">Drop your video or audio here</p>
                 <p className="text-xs text-zinc-500">MP4 · MOV · MP3 · WAV · M4A</p>
-                <Button variant="secondary" size="sm" className="bg-white/10 text-zinc-200 hover:bg-white/15" data-testid="new-project-browse-button">
+                <Button variant="outline" size="sm" className="h-8 rounded-lg border-white/[0.14] bg-transparent text-zinc-300 hover:bg-white/[0.06] hover:text-zinc-100" data-testid="new-project-browse-button">
                   Browse Files
                 </Button>
               </>
             )}
-            <p className="text-xs text-zinc-500">Video up to 500 MB · Audio up to 100 MB · Max 30 minutes</p>
+            <p className="text-[11px] text-zinc-600">Video up to 500 MB · Audio up to 100 MB · Max 30 minutes</p>
             {error && (
               <p role="alert" data-testid="new-project-upload-error" className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
                 <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" /> {error}
@@ -263,39 +263,37 @@ const NewProject = () => {
       {/* Uploaded file card + preview */}
       {file && uploadState === "complete" && (
         <section aria-label="Uploaded file" className="space-y-4" data-testid="new-project-file-card-section">
-          <Card className="border-white/10 bg-white/[0.03]">
-            <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                {file.thumbnail ? (
-                  <img src={file.thumbnail} alt="" aria-hidden="true" className="h-14 w-24 shrink-0 rounded-lg object-cover" />
-                ) : (
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-300">
-                    {file.kind === "video" ? <Film className="h-6 w-6" aria-hidden="true" /> : <Music className="h-6 w-6" aria-hidden="true" />}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-zinc-100">{file.name}</p>
-                  <p className="text-xs text-zinc-500">
-                    {file.kind === "video" ? "Video" : "Audio"} · {file.ext} · {fmtSize(file.size)} · {fmtTime(file.duration)}
-                  </p>
-                  <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-400">
-                    <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Upload complete
-                  </p>
+          <div className="flex flex-col gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              {file.thumbnail ? (
+                <img src={file.thumbnail} alt="" aria-hidden="true" className="aspect-video h-11 w-[72px] shrink-0 rounded-lg border border-white/[0.06] object-cover" />
+              ) : (
+                <div className="flex aspect-video h-11 w-[72px] shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-zinc-400">
+                  {file.kind === "video" ? <Film className="h-4 w-4" aria-hidden="true" /> : <Music className="h-4 w-4" aria-hidden="true" />}
                 </div>
+              )}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-zinc-200">{file.name}</p>
+                <p className="text-xs text-zinc-500">
+                  {file.kind === "video" ? "Video" : "Audio"} · {file.ext} · {fmtSize(file.size)} · {fmtTime(file.duration)}
+                </p>
+                <p className="mt-0.5 flex items-center gap-1 text-[11px] text-emerald-400">
+                  <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Upload complete
+                </p>
               </div>
-              <div className="flex shrink-0 gap-2">
-                <Button variant="secondary" size="sm" data-testid="new-project-replace-button"
-                  className="gap-1.5 bg-white/10 text-zinc-200 hover:bg-white/15"
-                  onClick={() => inputRef.current?.click()}>
-                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Replace
-                </Button>
-                <Button variant="ghost" size="sm" data-testid="new-project-remove-button"
-                  className="gap-1.5 text-zinc-400 hover:text-red-400" onClick={removeFile}>
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Remove
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="flex shrink-0 gap-1">
+              <Button variant="ghost" size="sm" data-testid="new-project-replace-button"
+                className="h-8 gap-1.5 text-zinc-400 hover:text-zinc-100"
+                onClick={() => inputRef.current?.click()}>
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Replace
+              </Button>
+              <Button variant="ghost" size="sm" data-testid="new-project-remove-button"
+                className="h-8 gap-1.5 text-zinc-500 hover:text-red-400" onClick={removeFile}>
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Remove
+              </Button>
+            </div>
+          </div>
           <MediaPreview file={file} />
         </section>
       )}
@@ -399,8 +397,8 @@ const NewProject = () => {
               }
               navigate("/voice-changer");
             }}
-            className="gap-2 bg-zinc-100 text-zinc-900 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50">
-            <Sparkles className="h-4 w-4" aria-hidden="true" /> Continue
+            className="h-9 gap-1.5 rounded-lg bg-zinc-100 px-4 text-zinc-900 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50">
+            Continue
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
@@ -454,7 +452,7 @@ const MediaPreview = ({ file }: { file: UploadedFile }) => {
             <div className="flex h-24 items-center gap-1">
               {bars.map((h, i) => (
                 <span key={i}
-                  className={`w-full rounded-sm transition-colors ${i / bars.length <= time / (duration || 1) ? "bg-indigo-400/80" : "bg-indigo-500/25"}`}
+                  className={`w-full rounded-sm transition-colors ${i / bars.length <= time / (duration || 1) ? "bg-zinc-300/80" : "bg-white/15"}`}
                   style={{ height: `${h}%` }} />
               ))}
             </div>
