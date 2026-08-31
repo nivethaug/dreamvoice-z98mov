@@ -271,7 +271,7 @@ const VoiceChanger = () => {
             <Button onClick={() => navigate("/new-project")} className="mt-1 gap-2 bg-indigo-500 text-white hover:bg-indigo-400">
               <ArrowRight className="h-4 w-4" aria-hidden="true" /> Create a Project
             </Button>
-            <p className="mt-4 max-w-md text-[11px] leading-relaxed text-zinc-500" data-testid="voice-changer-quality-hint-empty">
+            <p className="mt-4 max-w-md text-xs leading-relaxed text-zinc-500" data-testid="voice-changer-quality-hint-empty">
               Quality tip: your audio quality matters. Clean, natural speech from a single speaker produces better voice-conversion results — avoid background noise, music, echo, clipping, and distortion. For the best voice match, use a clean 30–60 second reference recording. Source audio matters too — unclear or noisy speech can remain in the converted result.
             </p>
           </CardContent>
@@ -300,8 +300,8 @@ const VoiceChanger = () => {
               <div className="mb-2 flex justify-between text-xs tabular-nums text-zinc-400">
                 <span>Progress</span><span>{Math.floor(progress)}%</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all" style={{ width: `${progress}%` }} />
+              <div className="h-2 overflow-hidden rounded-full bg-white/[0.07]">
+                <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${progress}%` }} />
               </div>
             </div>
             <ol className="w-full max-w-xl space-y-2 text-left text-sm" data-testid="voice-changer-processing-steps">
@@ -311,7 +311,7 @@ const VoiceChanger = () => {
                   <li key={step} className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${
                     state === "done" ? "border-emerald-500/20 bg-emerald-500/[0.05] text-emerald-300"
                     : state === "current" ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-200"
-                    : "border-white/5 bg-white/[0.02] text-zinc-500"}`}>
+                    : "border-white/[0.06] bg-white/[0.02] text-zinc-500"}`}>
                     {state === "done" ? <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
                       : state === "current" ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
                       : <span className="h-4 w-4 shrink-0 rounded-full border border-white/20" aria-hidden="true" />}
@@ -343,14 +343,14 @@ const VoiceChanger = () => {
               </div>
               <Button variant="secondary" size="sm" onClick={() => { setPhase("setup"); setProgress(0); }}
                 data-testid="voice-changer-edit-voice-button"
-                className="gap-1.5 bg-white/10 text-zinc-200 hover:bg-white/15">
+                className="gap-1.5 border border-white/[0.08] bg-white/[0.04] text-zinc-200 hover:bg-white/[0.08] hover:text-zinc-100">
                 <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Edit Voice
               </Button>
             </CardContent>
           </Card>
 
           <Tabs defaultValue="new" data-testid="voice-changer-result-tabs">
-            <TabsList className="bg-white/5">
+            <TabsList className="bg-white/[0.04]">
               <TabsTrigger value="original" data-testid="voice-changer-tab-original">Original</TabsTrigger>
               <TabsTrigger value="new" data-testid="voice-changer-tab-new">New Voice</TabsTrigger>
             </TabsList>
@@ -358,11 +358,11 @@ const VoiceChanger = () => {
             <TabsContent value="new" className="mt-4"><MediaPlayer media={media} label="New Voice" mockConverted src={resultUrl ?? undefined} srcKind={resultIsVideo ? "video" : "audio"} /></TabsContent>
           </Tabs>
 
-          <Card className="border-white/10 bg-white/[0.03]">
+          <Card className="border-white/[0.07] bg-white/[0.02]">
             <CardContent className="grid gap-4 p-5 sm:grid-cols-3">
-              <div><p className="text-[11px] uppercase tracking-wide text-zinc-500">Voice</p><p className="mt-1 text-sm font-medium text-zinc-100">{selectedVoice.name}</p></div>
-              <div><p className="text-[11px] uppercase tracking-wide text-zinc-500">Duration</p><p className="mt-1 text-sm font-medium text-zinc-100">{fmtTime(media.duration)}</p></div>
-              <div><p className="text-[11px] uppercase tracking-wide text-zinc-500">Language</p><p className="mt-1 text-sm font-medium text-zinc-100">{media.language}</p></div>
+              <div><p className="text-xs uppercase tracking-wide text-zinc-500">Voice</p><p className="mt-1 text-sm font-medium text-zinc-100">{selectedVoice.name}</p></div>
+              <div><p className="text-xs uppercase tracking-wide text-zinc-500">Duration</p><p className="mt-1 text-sm font-medium text-zinc-100">{fmtTime(media.duration)}</p></div>
+              <div><p className="text-xs uppercase tracking-wide text-zinc-500">Language</p><p className="mt-1 text-sm font-medium text-zinc-100">{media.language}</p></div>
             </CardContent>
           </Card>
 
@@ -372,12 +372,12 @@ const VoiceChanger = () => {
               <Download className="h-4 w-4" aria-hidden="true" /> Download Audio
             </Button>
             {resultVideoUrl && (
-              <Button variant="secondary" className="gap-2 bg-white/10 text-zinc-200 hover:bg-white/15" data-testid="voice-changer-download-video"
+              <Button variant="secondary" className="gap-2 border border-white/[0.08] bg-white/[0.04] text-zinc-200 hover:bg-white/[0.08] hover:text-zinc-100" data-testid="voice-changer-download-video"
                 onClick={() => { if (resultVideoUrl) window.open(resultVideoUrl, "_blank"); else setToast({ kind: "error", msg: "No video output available." }); }}>
                 <Film className="h-4 w-4" aria-hidden="true" /> Download Video
               </Button>
             )}
-            <Button variant="secondary" className="gap-2 bg-white/10 text-zinc-200 hover:bg-white/15" onClick={() => { setPhase("setup"); setProgress(0); }}>
+            <Button variant="secondary" className="gap-2 border border-white/[0.08] bg-white/[0.04] text-zinc-200 hover:bg-white/[0.08] hover:text-zinc-100" onClick={() => { setPhase("setup"); setProgress(0); }}>
               <Pencil className="h-4 w-4" aria-hidden="true" /> Edit Voice
             </Button>
             <Button className="ml-auto gap-2 bg-indigo-500 text-white hover:bg-indigo-400" data-testid="voice-changer-continue-publish-button"
@@ -396,7 +396,7 @@ const VoiceChanger = () => {
             <MediaPlayer media={media} label="Source media" mockConverted={false} showMeta />
 
             {/* Source audio quality guidance */}
-            <Card className="border-white/10 bg-white/[0.03]" data-testid="voice-changer-source-quality-note">
+            <Card className="border-white/[0.07] bg-white/[0.02]" data-testid="voice-changer-source-quality-note">
               <CardContent className="p-5">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
                   <Volume2 className="h-4 w-4 text-indigo-400" aria-hidden="true" /> Source audio also matters
@@ -411,11 +411,11 @@ const VoiceChanger = () => {
             </Card>
 
             {/* Original Voice card */}
-            <Card className="border-white/10 bg-white/[0.03]" data-testid="voice-changer-original-voice">
+            <Card className="border-white/[0.07] bg-white/[0.02]" data-testid="voice-changer-original-voice">
               <CardContent className="p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-zinc-100">Original Voice</h2>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[11px] text-zinc-400">Source voice</span>
+                  <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-0.5 text-xs text-zinc-400">Source voice</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-zinc-600/50 to-zinc-800/50 text-sm font-semibold text-zinc-300">OV</div>
@@ -424,7 +424,7 @@ const VoiceChanger = () => {
                     <p className="text-xs text-zinc-500">Detected speaker</p>
                     <p className="mt-1 text-xs text-zinc-400">{media.language} · {fmtTime(media.duration)}</p>
                   </div>
-                  <Button variant="secondary" size="sm" className="gap-1.5 bg-white/10 text-zinc-200 hover:bg-white/15"
+                  <Button variant="secondary" size="sm" className="gap-1.5 border border-white/[0.08] bg-white/[0.04] text-zinc-200 hover:bg-white/[0.08] hover:text-zinc-100"
                     data-testid="voice-changer-preview-original-voice"
                     onClick={() => setToast({ kind: "success", msg: "Playing original voice (preview)" })}>
                     <Play className="h-3.5 w-3.5" aria-hidden="true" /> Preview
@@ -434,11 +434,11 @@ const VoiceChanger = () => {
             </Card>
 
             {/* Before / After */}
-            <Card className="border-white/10 bg-white/[0.03]" data-testid="voice-changer-compare">
+            <Card className="border-white/[0.07] bg-white/[0.02]" data-testid="voice-changer-compare">
               <CardContent className="p-5">
                 <h2 className="mb-4 text-sm font-semibold text-zinc-100">Original Voice <span className="mx-1 text-zinc-600">|</span> New Voice</h2>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Button variant="secondary" className="gap-2 bg-white/10 text-zinc-200 hover:bg-white/15"
+                  <Button variant="secondary" className="gap-2 border border-white/[0.08] bg-white/[0.04] text-zinc-200 hover:bg-white/[0.08] hover:text-zinc-100"
                     data-testid="voice-changer-compare-original"
                     onClick={() => setToast({ kind: "success", msg: "Playing original voice" })}>
                     ▶ Original
@@ -462,14 +462,14 @@ const VoiceChanger = () => {
                 <div className="flex gap-3">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
                   <div>
-                    <p className="text-xs font-semibold text-amber-300">⚠️ Voice Rights Notice</p>
+                    <p className="text-xs font-semibold text-amber-300">Voice Rights Notice</p>
                     <p className="mt-1 text-xs leading-relaxed text-zinc-400">
                       Only upload or clone voices you own or have explicit permission to use. You are solely responsible for
                       voice licensing, consent, and compliance with applicable laws and third-party rights. DreamAgent does
                       not verify voice ownership or authorization.
                     </p>
                     {rightsConfirmed && (
-                      <p className="mt-2 flex items-center gap-1 text-[11px] text-emerald-400">
+                      <p className="mt-2 flex items-center gap-1 text-xs text-emerald-400">
                         <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Rights confirmed during project creation.
                       </p>
                     )}
@@ -482,11 +482,11 @@ const VoiceChanger = () => {
           {/* RIGHT column */}
           <div className="space-y-6">
             {/* Target Voice */}
-            <Card className="border-white/10 bg-white/[0.03]" data-testid="voice-changer-target-voice">
+            <Card className="border-white/[0.07] bg-white/[0.02]" data-testid="voice-changer-target-voice">
               <CardContent className="p-5">
                 <h2 className="text-sm font-semibold text-zinc-100">Target Voice</h2>
                 <p className="mt-0.5 text-xs text-zinc-500">Choose the voice you want to use.</p>
-                <p className="mt-2 text-[11px] leading-relaxed text-indigo-300/80" data-testid="voice-changer-reference-quality-hint">
+                <p className="mt-2 text-xs leading-relaxed text-indigo-300/80" data-testid="voice-changer-reference-quality-hint">
                   Better reference audio → better voice match. Use 30–60 seconds of clean, natural speech from one speaker for the best results.
                 </p>
 
@@ -494,7 +494,7 @@ const VoiceChanger = () => {
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
                   <input type="text" placeholder="Search voices" aria-label="Search voices" data-testid="voice-changer-search-input"
                     value={query} onChange={e => setQuery(e.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-white/[0.04] py-2 pl-9 pr-3 text-sm text-zinc-200 placeholder-zinc-500 outline-none focus:border-indigo-500/50" />
+                    className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] py-2 pl-9 pr-3 text-sm text-zinc-200 placeholder-zinc-500 outline-none focus:border-indigo-500/50" />
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Voice filters" data-testid="voice-changer-filters">
@@ -502,25 +502,25 @@ const VoiceChanger = () => {
                     <button key={f} type="button" aria-pressed={filter === f}
                       data-testid={`voice-changer-filter-${f.toLowerCase().replace(/\s+/g, "-")}`}
                       onClick={() => setFilter(f)}
-                      className={`rounded-full border px-3 py-1 text-[11px] transition-colors ${
-                        filter === f ? "border-indigo-500/60 bg-indigo-500/15 text-indigo-200" : "border-white/10 bg-white/[0.03] text-zinc-400 hover:text-zinc-200"}`}>
+                      className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                        filter === f ? "border-indigo-500/60 bg-indigo-500/15 text-indigo-200" : "border-white/[0.07] bg-white/[0.02] text-zinc-400 hover:text-zinc-200"}`}>
                       {f}
                     </button>
                   ))}
                 </div>
 
                 <div className="mt-3 flex items-center justify-between gap-2">
-                  <label htmlFor="voice-sort" className="text-[11px] text-zinc-500">Sort by</label>
+                  <label htmlFor="voice-sort" className="text-xs text-zinc-500">Sort by</label>
                   <select id="voice-sort" aria-label="Sort voices" data-testid="voice-changer-sort-select"
                     value={sort} onChange={e => setSort(e.target.value as Sort)}
-                    className="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-zinc-300 outline-none focus:border-indigo-500/50">
+                    className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-xs text-zinc-300 outline-none focus:border-indigo-500/50">
                     <option>Recommended</option><option>Recently Added</option><option>Name</option>
                   </select>
                 </div>
 
                 <div className="mt-4 space-y-3" data-testid="voice-changer-voice-list">
                   {voices.length === 0 && (
-                    <p className="rounded-lg border border-white/10 bg-white/[0.02] p-4 text-center text-xs text-zinc-500">No voices match your search.</p>
+                    <p className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-4 text-center text-xs text-zinc-500">No voices match your search.</p>
                   )}
                   {voices.map(v => {
                     const selected = selectedVoice?.id === v.id;
@@ -528,7 +528,7 @@ const VoiceChanger = () => {
                       <div key={v.id} role="radio" aria-checked={selected}
                         data-testid={`voice-changer-voice-${v.id}`}
                         className={`rounded-xl border p-3 transition-all ${
-                          selected ? "border-indigo-500/60 bg-indigo-500/10 shadow-lg shadow-indigo-950/40" : "border-white/10 bg-white/[0.02] hover:border-indigo-500/30"}`}>
+                          selected ? "border-indigo-500/60 bg-indigo-500/10 shadow-lg shadow-indigo-950/40" : "border-white/[0.08] bg-white/[0.02] hover:border-indigo-500/30"}`}>
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
                             style={{ background: `linear-gradient(135deg, hsl(${v.hue} 70% 55%), hsl(${v.hue + 30} 70% 45%))` }}>
@@ -537,20 +537,20 @@ const VoiceChanger = () => {
                           <div className="min-w-0 flex-1">
                             <p className="flex items-center gap-1.5 text-sm font-medium text-zinc-100">
                               {v.name}
-                              {v.personal && <span className="rounded-full bg-purple-500/15 px-1.5 py-0.5 text-[10px] text-purple-300">Personal</span>}
+                              {v.personal && <span className="rounded-full border border-indigo-500/25 bg-indigo-500/10 px-1.5 py-0 text-[11px] text-indigo-300">Personal</span>}
                             </p>
                             <p className="truncate text-xs text-zinc-500">{v.desc}</p>
-                            <p className="text-[11px] text-zinc-600">{v.language}</p>
+                            <p className="text-xs text-zinc-500">{v.language}</p>
                           </div>
                         </div>
                         <div className="mt-2.5 flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-[11px] text-zinc-400 hover:text-zinc-200"
+                          <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs text-zinc-400 hover:text-zinc-200"
                             data-testid={`voice-changer-preview-${v.id}`}
                             onClick={() => setToast({ kind: "success", msg: `Previewing ${v.name}` })}>
                             <Play className="h-3 w-3" aria-hidden="true" /> Preview
                           </Button>
                           <Button size="sm"
-                            className={`h-7 gap-1 px-3 text-[11px] ${selected ? "bg-indigo-500 text-white hover:bg-indigo-400" : "bg-white/10 text-zinc-200 hover:bg-white/20"}`}
+                            className={`h-7 gap-1 px-3 text-xs ${selected ? "bg-indigo-500 text-white hover:bg-indigo-400" : "border border-white/[0.08] bg-white/[0.04] text-zinc-200 hover:bg-white/[0.08]"}`}
                             aria-pressed={selected}
                             data-testid={`voice-changer-select-${v.id}`}
                             onClick={() => { setSelectedVoice(v); setError(""); }}>
@@ -594,7 +594,7 @@ const VoiceChanger = () => {
                       <li>• Use natural speech with varied expression.</li>
                       <li>• Keep the source recording clear as well.</li>
                     </ul>
-                    <p className="text-[11px] leading-relaxed text-zinc-500">
+                    <p className="text-xs leading-relaxed text-zinc-500">
                       Think of voice conversion as replacing the speaker's voice while keeping the original speech. The cleaner the original and reference recordings, the better the result. Avoid background noise, music, echo, clipping, and distortion.
                     </p>
                   </div>
@@ -603,7 +603,7 @@ const VoiceChanger = () => {
             </Card>
 
             {/* Voice Settings */}
-            <Card className="border-white/10 bg-white/[0.03]" data-testid="voice-changer-settings">
+            <Card className="border-white/[0.07] bg-white/[0.02]" data-testid="voice-changer-settings">
               <CardContent className="p-5">
                 <button type="button" aria-expanded={settingsOpen}
                   data-testid="voice-changer-settings-toggle"
@@ -654,7 +654,7 @@ const VoiceChanger = () => {
                 className="w-full gap-2 bg-indigo-500 py-6 text-base font-semibold text-white hover:bg-indigo-400">
                 <Mic2 className="h-5 w-5" aria-hidden="true" /> Generate Voice
               </Button>
-              <p className="text-center text-[11px] text-zinc-500">Voice conversion will process the selected media.</p>
+              <p className="text-center text-xs text-zinc-500">Voice conversion will process the selected media.</p>
             </div>
           </div>
         </div>
@@ -687,7 +687,7 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
     25 + Math.abs(Math.sin(i * 0.63 + (mockConverted ? 2 : 0)) * 35) + Math.abs(Math.sin(i * 0.19)) * 40);
 
   return (
-    <Card className="border-white/10 bg-white/[0.03]" data-testid={`voice-changer-media-${label.toLowerCase().replace(/\s+/g, "-")}`}>
+    <Card className="border-white/[0.07] bg-white/[0.02]" data-testid={`voice-changer-media-${label.toLowerCase().replace(/\s+/g, "-")}`}>
       <CardContent className="space-y-4 p-4">
         {playKind === "video" ? (
           <video ref={ref} src={playUrl} poster={playKind === "video" ? media.thumbnail : undefined}
@@ -697,11 +697,11 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
             onLoadedMetadata={e => setDuration(e.currentTarget.duration || media.duration)}
             onEnded={() => setPlaying(false)} />
         ) : (
-          <div ref={containerRef} className="relative overflow-hidden rounded-lg border border-white/10 bg-white/[0.02] p-4">
+          <div ref={containerRef} className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.02] p-4">
             <div className="flex h-28 items-center gap-1" aria-hidden="true">
               {bars.map((h, i) => (
                 <span key={i}
-                  className={`w-full rounded-sm ${mockConverted ? "bg-purple-400/80" : "bg-indigo-400/80"} ${i / bars.length <= time / (duration || 1) ? "" : "opacity-30"}`}
+                  className={`w-full rounded-full ${mockConverted ? "bg-indigo-400" : "bg-zinc-400"} ${i / bars.length <= time / (duration || 1) ? "" : "opacity-25"}`}
                   style={{ height: `${h}%` }} />
               ))}
             </div>
@@ -714,7 +714,7 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button variant="secondary" size="sm" onClick={toggle} aria-label={playing ? "Pause" : "Play"}
-            className="h-9 w-9 shrink-0 rounded-full bg-white/10 p-0 text-zinc-100 hover:bg-white/20">
+            className="h-9 w-9 shrink-0 rounded-full bg-white/[0.08] p-0 text-zinc-100 hover:bg-white/[0.16]">
             {playing ? <Pause className="h-4 w-4" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
           </Button>
           <span className="shrink-0 text-xs tabular-nums text-zinc-400">{fmtTime(time)} / {fmtTime(duration)}</span>
@@ -737,7 +737,7 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
         </div>
 
         {showMeta && (
-          <div className="grid gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-3 text-xs sm:grid-cols-3">
+          <div className="grid gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 text-xs sm:grid-cols-3">
             <div><span className="text-zinc-500">Original file: </span><span className="truncate text-zinc-300">{media.name}</span></div>
             <div><span className="text-zinc-500">Duration: </span><span className="text-zinc-300">{fmtTime(media.duration)}</span></div>
             <div><span className="text-zinc-500">Language: </span><span className="text-zinc-300">{media.language}</span></div>

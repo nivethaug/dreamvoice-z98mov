@@ -194,7 +194,7 @@ const Myvoices = () => {
                     {v.authorized ? <><ShieldCheck className="h-3 w-3" aria-hidden="true" /> Authorized</> : "No reference audio"}
                   </Badge>
                   {v.reference_duration != null && (
-                    <Badge variant="outline" className="rounded-md border-white/[0.08] bg-white/[0.04] px-1.5 py-0 text-[11px] font-normal text-zinc-400">
+                    <Badge variant="outline" className="rounded-md border-white/[0.08] bg-white/[0.04] px-1.5 py-0 text-xs font-normal text-zinc-400">
                       Reference {formatDuration(v.reference_duration)}
                     </Badge>
                   )}

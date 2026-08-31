@@ -86,10 +86,10 @@ const Studio = () => {
       {/* Header */}
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-zinc-100 md:text-2xl">Voice Studio</h1>
+          <h1 className="text-[22px] font-semibold tracking-tight text-zinc-100">Voice Studio</h1>
           <p className="mt-0.5 text-sm text-zinc-500">Transform your recordings with AI voices.</p>
         </div>
-        <Button asChild size="sm" className="h-9 gap-1.5 rounded-lg bg-zinc-100 px-3.5 text-zinc-900 hover:bg-white" data-testid="studio-new-project-button">
+        <Button asChild size="sm" className="h-9 gap-1.5 rounded-lg bg-indigo-500 px-3.5 text-white hover:bg-indigo-400" data-testid="studio-new-project-button">
           <Link to="/new-project"><Plus className="h-4 w-4" aria-hidden="true" /> New Project</Link>
         </Button>
       </header>
@@ -142,7 +142,7 @@ const Studio = () => {
               <Button variant="outline" size="sm" className="h-8 rounded-lg border-white/[0.14] bg-transparent text-zinc-300 hover:bg-white/[0.06] hover:text-zinc-100">
                 Browse Files
               </Button>
-              <p className="text-xs text-zinc-600">Video up to 500 MB · Audio up to 100 MB · Max 30 minutes</p>
+              <p className="text-xs text-zinc-500">Video up to 500 MB · Audio up to 100 MB · Max 30 minutes</p>
             </div>
             <div className="flex flex-col gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3.5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-3">
@@ -183,7 +183,7 @@ const Studio = () => {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-zinc-600">Keep this window open while your voice track is being prepared.</p>
+              <p className="text-xs text-zinc-500">Keep this window open while your voice track is being prepared.</p>
               <Button variant="ghost" size="sm" onClick={() => { setShowProcessing(false); setProgress(67); }} className="text-zinc-500 hover:text-red-400">Cancel</Button>
             </CardContent>
           </Card>
@@ -206,19 +206,19 @@ const Studio = () => {
                       <Play className="h-3 w-3 text-white/90" aria-hidden="true" />
                     </span>
                   </span>
-                  <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 py-px text-[10px] tabular-nums leading-tight text-white/90">{p.duration}</span>
+                  <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 py-px text-xs tabular-nums leading-tight text-white/90">{p.duration}</span>
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col py-0.5">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="truncate text-sm font-medium text-zinc-100">{p.name}</h3>
-                    <Badge variant="outline" className={`shrink-0 rounded-md border px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide ${statusStyle[p.status]}`}>
+                    <Badge variant="outline" className={`shrink-0 rounded-md border px-1.5 py-0 text-xs font-medium uppercase tracking-wide ${statusStyle[p.status]}`}>
                       {p.status === "Processing" && <Loader2 className="mr-1 h-2.5 w-2.5 animate-spin" aria-hidden="true" />}
                       {p.status}
                     </Badge>
                   </div>
                   <p className="mt-1 truncate text-xs text-zinc-500">{p.voice} · {p.language}</p>
                   <div className="mt-auto flex items-center justify-between pt-2">
-                    <span className="flex items-center gap-1 text-[11px] text-zinc-600">
+                    <span className="flex items-center gap-1 text-xs text-zinc-500">
                       <Clock className="h-3 w-3" aria-hidden="true" /> {p.edited}
                     </span>
                     <span className="flex items-center gap-0.5 text-xs font-medium text-zinc-400 transition-colors group-hover:text-zinc-100">

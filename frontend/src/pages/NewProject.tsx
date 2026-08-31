@@ -248,7 +248,7 @@ const NewProject = () => {
                 </Button>
               </>
             )}
-            <p className="text-[11px] text-zinc-600">Video up to 500 MB · Audio up to 100 MB · Max 30 minutes</p>
+            <p className="text-xs text-zinc-500">Video up to 500 MB · Audio up to 100 MB · Max 30 minutes</p>
             {error && (
               <p role="alert" data-testid="new-project-upload-error" className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
                 <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" /> {error}
@@ -277,7 +277,7 @@ const NewProject = () => {
                 <p className="text-xs text-zinc-500">
                   {file.kind === "video" ? "Video" : "Audio"} · {file.ext} · {fmtSize(file.size)} · {fmtTime(file.duration)}
                 </p>
-                <p className="mt-0.5 flex items-center gap-1 text-[11px] text-emerald-400">
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-400">
                   <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Upload complete
                 </p>
               </div>
@@ -315,7 +315,7 @@ const NewProject = () => {
                   className={`flex h-full flex-col gap-3 rounded-xl border p-5 text-left transition-colors ${
                     selected
                       ? "border-zinc-300/60 bg-white/[0.06]"
-                      : "border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.05]"}`}>
+                      : "border-white/[0.07] bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.05]"}`}>
                   <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
                     selected ? "bg-zinc-100 text-zinc-900" : "bg-white/[0.06] text-zinc-400"}`}>
                     <a.icon className="h-5 w-5" aria-hidden="true" />
@@ -324,7 +324,7 @@ const NewProject = () => {
                     <p className="text-sm font-semibold text-zinc-100">{a.title}</p>
                     <p className="mt-1 text-xs leading-relaxed text-zinc-400">{a.desc}</p>
                   </div>
-                  {selected && <span className="flex items-center gap-1 text-[11px] font-medium text-zinc-300">
+                  {selected && <span className="flex items-center gap-1 text-xs font-medium text-zinc-300">
                     <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Selected
                   </span>}
                 </button>
@@ -349,7 +349,7 @@ const NewProject = () => {
                 </p>
               </div>
             </div>
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs leading-relaxed text-zinc-300">
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 text-xs leading-relaxed text-zinc-300">
               <Checkbox
                 checked={rightsConfirmed}
                 onCheckedChange={v => { setRightsConfirmed(v === true); projectStore.setRights(v === true); }}
@@ -359,7 +359,7 @@ const NewProject = () => {
               <span>I confirm that I have the necessary rights and authorization to use this voice and accept responsibility for its use.</span>
             </label>
             {!rightsConfirmed && (
-              <p className="text-[11px] text-zinc-500" role="note">You must confirm voice rights before continuing.</p>
+              <p className="text-xs text-zinc-500" role="note">You must confirm voice rights before continuing.</p>
             )}
           </CardContent>
         </Card>
@@ -434,7 +434,7 @@ const MediaPreview = ({ file }: { file: UploadedFile }) => {
   );
 
   return (
-    <Card className="border-white/10 bg-white/[0.03]" data-testid="new-project-media-preview">
+    <Card className="border-white/[0.07] bg-white/[0.02]" data-testid="new-project-media-preview">
       <CardContent className="space-y-4 p-4">
         {file.kind === "video" ? (
           <video
@@ -448,7 +448,7 @@ const MediaPreview = ({ file }: { file: UploadedFile }) => {
             onEnded={() => setPlaying(false)}
           />
         ) : (
-          <div className="relative overflow-hidden rounded-lg border border-white/10 bg-white/[0.02] p-4" aria-hidden="true">
+          <div className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.02] p-4" aria-hidden="true">
             <div className="flex h-24 items-center gap-1">
               {bars.map((h, i) => (
                 <span key={i}
@@ -467,7 +467,7 @@ const MediaPreview = ({ file }: { file: UploadedFile }) => {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button variant="secondary" size="sm" onClick={toggle} aria-label={playing ? "Pause" : "Play"}
             data-testid="new-project-preview-play-button"
-            className="h-9 w-9 shrink-0 rounded-full bg-white/10 p-0 text-zinc-100 hover:bg-white/20">
+            className="h-9 w-9 shrink-0 rounded-full bg-white/[0.08] p-0 text-zinc-100 hover:bg-white/[0.16]">
             {playing ? <Pause className="h-4 w-4" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
           </Button>
           <span className="shrink-0 text-xs tabular-nums text-zinc-400">{fmtTime(time)} / {fmtTime(duration)}</span>

@@ -227,7 +227,7 @@ const CreateVoice = () => {
                 {state === "done" ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : i + 1}
               </div>
               <span className={`hidden text-xs sm:block ${state === "active" ? "text-zinc-100" : "text-zinc-500"}`}>{s}</span>
-              {i < STEPS.length - 1 && <div className={`h-px flex-1 ${i < step ? "bg-emerald-500/40" : "bg-white/10"}`} aria-hidden="true" />}
+              {i < STEPS.length - 1 && <div className={`h-px flex-1 ${i < step ? "bg-emerald-500/40" : "bg-white/[0.07]"}`} aria-hidden="true" />}
             </li>
           );
         })}
@@ -254,7 +254,7 @@ const CreateVoice = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-white/10 bg-white/[0.03]" data-testid="create-voice-upload-section">
+          <Card className="border-white/[0.07] bg-white/[0.02]" data-testid="create-voice-upload-section">
             <CardContent className="p-6">
               <h2 className="text-sm font-semibold text-zinc-100">Upload Voice Sample</h2>
 
@@ -268,24 +268,24 @@ const CreateVoice = () => {
                   tabIndex={0}
                   aria-label="Upload voice sample — drop a file or browse"
                   data-testid="create-voice-dropzone"
-                  className={`mt-4 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-10 text-center transition-colors ${
+                  className={`mt-4 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-10 text-center transition-colors ${
                     dragging ? "border-indigo-500/70 bg-indigo-500/10" : "border-white/15 bg-white/[0.02] hover:border-indigo-500/40"}`}>
                   <Upload className="h-10 w-10 text-indigo-400" aria-hidden="true" />
                   <p className="text-sm font-medium text-zinc-200">Drop a clear voice recording here</p>
                   <p className="text-xs text-zinc-500">WAV · MP3 · M4A</p>
-                  <Button variant="secondary" className="gap-2 bg-white/10 text-zinc-100 hover:bg-white/15"
+                  <Button variant="secondary" className="gap-2 border border-white/[0.08] bg-white/[0.04] text-zinc-100 hover:bg-white/[0.08]"
                     data-testid="create-voice-browse-button" onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}>
                     Browse Files
                   </Button>
-                  <p className="text-[11px] text-zinc-600">Audio up to 100 MB · Max 10 minutes</p>
+                  <p className="text-xs text-zinc-500">Audio up to 100 MB · Max 10 minutes</p>
                 </div>
               )}
 
               {uploading && (
-                <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-10" aria-live="polite" data-testid="create-voice-uploading">
+                <div className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-10" aria-live="polite" data-testid="create-voice-uploading">
                   <Loader2 className="h-8 w-8 animate-spin text-indigo-400" aria-hidden="true" />
                   <p className="text-sm text-zinc-300">Uploading sample… {Math.min(100, Math.round(progress))}%</p>
-                  <div className="h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-white/10">
+                  <div className="h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-white/[0.07]">
                     <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${Math.min(100, progress)}%` }} />
                   </div>
                 </div>
@@ -322,7 +322,7 @@ const CreateVoice = () => {
                       Sample quality: {sample.quality}
                     </Badge>
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400">
                       <span className="flex items-center gap-1.5 font-medium text-zinc-200"><Music className="h-3.5 w-3.5" aria-hidden="true" /> {sample.name}</span>
                       <span>Size: {fmtSize(sample.size)}</span>
@@ -340,7 +340,7 @@ const CreateVoice = () => {
                         className="h-8 gap-1.5 bg-indigo-500 text-white hover:bg-indigo-400">
                         {playing ? <><Pause className="h-3.5 w-3.5" aria-hidden="true" /> Pause</> : <><Play className="h-3.5 w-3.5" aria-hidden="true" /> Play</>}
                       </Button>
-                      <span className="font-mono text-[11px] text-zinc-500">{fmtTime(curTime)} / {fmtTime(sample.duration)}</span>
+                      <span className="font-mono text-xs text-zinc-500">{fmtTime(curTime)} / {fmtTime(sample.duration)}</span>
                       <div className="flex items-center gap-1.5">
                         <Volume2 className="h-3.5 w-3.5 text-zinc-500" aria-hidden="true" />
                         <input type="range" min={0} max={1} step={0.05} value={volume} aria-label="Sample playback volume"
@@ -375,24 +375,24 @@ const CreateVoice = () => {
                 <li>• One speaker</li><li>• No music</li>
                 <li className="sm:col-span-2">• Natural speaking voice</li>
               </ul>
-              <p className="mt-3 text-[11px] text-amber-400/90">Use only voices you own or have explicit permission to use.</p>
+              <p className="mt-3 text-xs text-amber-400/90">Use only voices you own or have explicit permission to use.</p>
             </CardContent>
           </Card>
 
           {sample && (
-            <Card className="border-white/10 bg-white/[0.03]" data-testid="create-voice-details-section">
+            <Card className="border-white/[0.07] bg-white/[0.02]" data-testid="create-voice-details-section">
               <CardContent className="space-y-5 p-6">
                 <h2 className="text-sm font-semibold text-zinc-100">Voice Details</h2>
                 <div className="space-y-2">
                   <Label htmlFor="voice-name" className="text-zinc-300">Voice Name</Label>
                   <Input id="voice-name" value={name} onChange={e => setName(e.target.value)} data-testid="create-voice-name-input"
-                    className="border-white/10 bg-white/[0.04] text-zinc-100" placeholder="My Voice" />
+                    className="border-white/[0.08] bg-white/[0.04] text-zinc-100" placeholder="My Voice" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="voice-desc" className="text-zinc-300">Description</Label>
                   <Textarea id="voice-desc" rows={3} value={desc} onChange={e => setDesc(e.target.value)}
                     data-testid="create-voice-desc-input"
-                    className="border-white/10 bg-white/[0.04] text-zinc-100" placeholder="Personal voice for YouTube videos" />
+                    className="border-white/[0.08] bg-white/[0.04] text-zinc-100" placeholder="Personal voice for YouTube videos" />
                 </div>
                 <fieldset className="space-y-2">
                   <legend className="text-sm text-zinc-300">Languages</legend>
@@ -402,7 +402,7 @@ const CreateVoice = () => {
                       return (
                         <button key={l} type="button" aria-pressed={on} data-testid={`create-voice-lang-${l.toLowerCase()}`}
                           onClick={() => setLangs(ls => (on ? ls.filter(x => x !== l) : [...ls, l]))}
-                          className={`rounded-full border px-3 py-1 text-[11px] ${on ? "border-indigo-500/60 bg-indigo-500/15 text-indigo-200" : "border-white/10 bg-white/[0.03] text-zinc-400 hover:text-zinc-200"}`}>
+                          className={`rounded-full border px-3 py-1 text-xs ${on ? "border-indigo-500/60 bg-indigo-500/15 text-indigo-200" : "border-white/[0.07] bg-white/[0.02] text-zinc-400 hover:text-zinc-200"}`}>
                           {l}
                         </button>
                       );
@@ -413,7 +413,7 @@ const CreateVoice = () => {
                   <Label htmlFor="voice-category" className="text-zinc-300">Voice Category</Label>
                   <select id="voice-category" value={category} aria-label="Voice category" data-testid="create-voice-category"
                     onChange={e => setCategory(e.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-zinc-200 outline-none focus:border-indigo-500/50">
+                    className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-zinc-200 outline-none focus:border-indigo-500/50">
                     {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                   </select>
                 </div>
@@ -427,7 +427,7 @@ const CreateVoice = () => {
                 <div className="flex gap-3">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
                   <div>
-                    <p className="text-sm font-semibold text-amber-300">⚠️ Voice Rights & Responsibility</p>
+                    <p className="text-sm font-semibold text-amber-300">Voice Rights & Responsibility</p>
                     <p className="mt-1 text-xs leading-relaxed text-zinc-400">
                       Only upload or clone voices you own or have explicit permission to use. You are solely responsible for voice licensing, consent, and compliance with applicable laws and third-party rights. DreamAgent does not verify voice ownership or authorization.
                     </p>
@@ -456,13 +456,13 @@ const CreateVoice = () => {
       {/* STEP 1: Review */}
       {step === 1 && sample && (
         <div className="space-y-6" data-testid="create-voice-review">
-          <Card className="border-white/10 bg-white/[0.03]">
+          <Card className="border-white/[0.07] bg-white/[0.02]">
             <CardContent className="space-y-5 p-6">
               <h2 className="text-sm font-semibold text-zinc-100">Review Voice</h2>
 
               <div className="space-y-2">
                 <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Voice Sample</p>
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400">
                     <span className="flex items-center gap-1.5 font-medium text-zinc-200"><Music className="h-3.5 w-3.5" aria-hidden="true" /> {sample.name}</span>
                     <span>{fmtSize(sample.size)}</span><span>{fmtTime(sample.duration)}</span><span>{sample.format}</span>
@@ -513,13 +513,13 @@ const CreateVoice = () => {
       {step === 2 && sample && (
         <div className="space-y-6">
           {!createdVoice && !createFailed && (
-            <Card className="border-white/10 bg-white/[0.03]" data-testid="create-voice-processing">
+            <Card className="border-white/[0.07] bg-white/[0.02]" data-testid="create-voice-processing">
               <CardContent className="space-y-6 p-8">
                 <div className="text-center">
                   <h2 className="text-lg font-semibold text-zinc-100">Creating your voice</h2>
                   <p className="mt-1 text-xs text-zinc-500">{Math.round(progressPct)}%</p>
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
                   <div className="h-full rounded-full bg-indigo-500 transition-all duration-300" style={{ width: `${progressPct}%` }} />
                 </div>
                 <div className="mx-auto flex h-20 max-w-md items-end justify-center gap-1" aria-hidden="true">
@@ -564,7 +564,7 @@ const CreateVoice = () => {
                   <CheckCircle2 className="h-10 w-10 text-emerald-400" aria-hidden="true" />
                   <h2 className="text-lg font-semibold text-zinc-100">Voice Created</h2>
                 </div>
-                <div className="mx-auto flex max-w-sm items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                <div className="mx-auto flex max-w-sm items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-700 text-white">
                     <Mic2 className="h-5 w-5" aria-hidden="true" />
                   </div>
@@ -579,7 +579,7 @@ const CreateVoice = () => {
                 </div>
 
                 {previewOpen && (
-                  <div className="mx-auto max-w-sm space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-4" data-testid="create-voice-preview">
+                  <div className="mx-auto max-w-sm space-y-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4" data-testid="create-voice-preview">
                     <p className="text-xs font-medium text-zinc-300">Voice Preview</p>
                     <p className="text-sm leading-relaxed text-zinc-400">“Hello, welcome to my channel. Today we're going to explore something interesting.”</p>
                     {previewState !== "idle" && (
@@ -594,14 +594,14 @@ const CreateVoice = () => {
                         className="gap-1.5 bg-indigo-500 text-white hover:bg-indigo-400">
                         {previewState === "generating" ? <><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Generating…</> : "Generate Preview"}
                       </Button>
-                      <Button size="sm" variant="secondary" disabled={previewState !== "ready"} className="gap-1.5 bg-white/10 text-zinc-200 hover:bg-white/15">
+                      <Button size="sm" variant="secondary" disabled={previewState !== "ready"} className="gap-1.5 border border-white/[0.08] bg-white/[0.04] text-zinc-200 hover:bg-white/[0.08] hover:text-zinc-100">
                         <Play className="h-3.5 w-3.5" aria-hidden="true" /> Play
                       </Button>
-                      <Button size="sm" variant="secondary" disabled className="gap-1.5 bg-white/10 text-zinc-400">
+                      <Button size="sm" variant="secondary" disabled className="gap-1.5 bg-white/[0.06] text-zinc-400">
                         <Pause className="h-3.5 w-3.5" aria-hidden="true" /> Pause
                       </Button>
                     </div>
-                    <p className="text-[11px] text-amber-400">Demo preview — no real audio is generated yet.</p>
+                    <p className="text-xs text-amber-400">Demo preview — no real audio is generated yet.</p>
                   </div>
                 )}
 

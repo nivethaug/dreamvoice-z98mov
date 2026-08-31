@@ -230,7 +230,7 @@ const Projects = () => {
                             </span>
                           )}
                           {j.duration_seconds != null && col === "Ready" && (
-                            <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 py-px text-[10px] tabular-nums leading-tight text-white/90">
+                            <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 py-px text-xs tabular-nums leading-tight text-white/90">
                               {fmtDur(j.duration_seconds)}
                             </span>
                           )}
@@ -240,14 +240,14 @@ const Projects = () => {
                           <div className="flex items-start justify-between gap-2">
                             <h3 className="truncate text-sm font-medium text-zinc-100">{title}</h3>
                             <Badge variant="outline"
-                              className={`shrink-0 rounded-md border px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide ${statusBadge[col]}`}>
+                              className={`shrink-0 rounded-md border px-1.5 py-0 text-xs font-medium uppercase tracking-wide ${statusBadge[col]}`}>
                               {col === "Processing" && <Loader2 className="mr-1 h-2.5 w-2.5 animate-spin" aria-hidden="true" />}
                               {col === "Failed" && <CircleDot className="mr-1 h-2.5 w-2.5" aria-hidden="true" />}
                               {col}
                             </Badge>
                           </div>
                           <p className="mt-1 truncate text-xs text-zinc-500">{meta}</p>
-                          <p className="mt-0.5 truncate text-[11px] text-zinc-600">
+                          <p className="mt-0.5 truncate text-xs text-zinc-500">
                             {fmtDate(j.created_at) ? `Created ${fmtDate(j.created_at)}` : ""}
                             {fmtDate(j.updated_at) && fmtDate(j.updated_at) !== fmtDate(j.created_at) ? ` · Updated ${fmtDate(j.updated_at)}` : ""}
                           </p>
@@ -258,14 +258,14 @@ const Projects = () => {
                             </div>
                           )}
                           {col === "Failed" && j.error && (
-                            <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-red-300/70" data-testid="projects-card-error">{j.error}</p>
+                            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-red-300/70" data-testid="projects-card-error">{j.error}</p>
                           )}
 
                           <div className="mt-auto flex items-center justify-between pt-2">
                             {col === "Ready" && j.result?.audio_url ? (
                               <Button asChild variant="ghost" size="sm" data-testid="projects-download"
                                 onClick={e => e.stopPropagation()}
-                                className="h-7 gap-1.5 px-2 text-[11px] text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100">
+                                className="h-7 gap-1.5 px-2 text-xs text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100">
                                 <a href={j.result.audio_url} target="_blank" rel="noreferrer" download aria-label="Download result">
                                   <Download className="h-3.5 w-3.5" aria-hidden="true" /> Download
                                 </a>
@@ -295,7 +295,7 @@ const Projects = () => {
       )}
 
       <Dialog open={!!pendingDelete} onOpenChange={(o) => !o && !deleting && setPendingDelete(null)}>
-        <DialogContent data-testid="projects-delete-dialog" className="border-white/10 bg-zinc-900">
+        <DialogContent data-testid="projects-delete-dialog" className="border-white/[0.08] bg-zinc-900">
           <DialogHeader>
             <DialogTitle>Delete this project?</DialogTitle>
             <DialogDescription>
