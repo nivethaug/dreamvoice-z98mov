@@ -187,8 +187,8 @@ const NewProject = () => {
         <div role="status" aria-live="polite"
           className={`fixed right-4 top-4 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-xl backdrop-blur ${
             toast.kind === "success"
-              ? "border-emerald-500/30 bg-emerald-950/90 text-emerald-300"
-              : "border-red-500/30 bg-red-950/90 text-red-300"}`}>
+              ? "border-emerald-500/30 bg-emerald-950/90 text-emerald-700 dark:text-emerald-300"
+              : "border-red-500/30 bg-red-950/90 text-red-700 dark:text-red-300"}`}>
           {toast.kind === "success"
             ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
             : <AlertTriangle className="h-4 w-4" aria-hidden="true" />}
@@ -201,10 +201,10 @@ const NewProject = () => {
 
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-zinc-100 md:text-2xl">Create Voice Project</h1>
-          <p className="mt-1 text-sm text-zinc-400">Upload a video or audio file to begin.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">Create Voice Project</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Upload a video or audio file to begin.</p>
         </div>
-        <Button variant="ghost" onClick={() => navigate("/")} className="w-fit text-zinc-400 hover:text-zinc-200">Back to Studio</Button>
+        <Button variant="ghost" onClick={() => navigate("/")} className="w-fit text-muted-foreground hover:text-foreground">Back to Studio</Button>
       </header>
 
       {/* Upload area */}
@@ -222,35 +222,35 @@ const NewProject = () => {
             onDrop={onDrop}
             className={`flex cursor-pointer flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed px-6 py-8 text-center transition-colors ${
               dragging
-                ? "border-zinc-300 bg-white/[0.06]"
+                ? "border-border bg-muted/30"
                 : error
                   ? "border-red-500/40 bg-red-500/[0.04]"
-                  : "border-white/15 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"}`}
+                  : "border-border bg-muted/30 hover:border-muted-foreground/40 hover:bg-muted/60"}`}
           >
             {uploadState === "uploading" ? (
               <>
-                <Loader2 className="h-7 w-7 animate-spin text-zinc-300" aria-hidden="true" />
-                <p className="font-medium text-zinc-200">Uploading…</p>
+                <Loader2 className="h-7 w-7 animate-spin text-foreground" aria-hidden="true" />
+                <p className="font-medium text-foreground">Uploading…</p>
                 <div className="w-64 max-w-full"><Progress value={progress} className="h-2" /></div>
               </>
             ) : dragging ? (
               <>
-                <Upload className="h-7 w-7 text-zinc-300" aria-hidden="true" />
-                <p className="font-medium text-zinc-100">Drop your file to upload</p>
+                <Upload className="h-7 w-7 text-foreground" aria-hidden="true" />
+                <p className="font-medium text-foreground">Drop your file to upload</p>
               </>
             ) : (
               <>
-                <Upload className="h-6 w-6 text-zinc-500" aria-hidden="true" />
-                <p className="text-sm font-medium text-zinc-200">Drop your video or audio here</p>
-                <p className="text-xs text-zinc-500">MP4 · MOV · MP3 · WAV · M4A</p>
-                <Button variant="outline" size="sm" className="h-8 rounded-lg border-white/[0.14] bg-transparent text-zinc-300 hover:bg-white/[0.06] hover:text-zinc-100" data-testid="new-project-browse-button">
+                <Upload className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+                <p className="text-sm font-medium text-foreground">Drop your video or audio here</p>
+                <p className="text-xs text-muted-foreground">MP4 · MOV · MP3 · WAV · M4A</p>
+                <Button variant="outline" size="sm" className="h-8 rounded-lg border-border bg-transparent text-foreground hover:bg-muted/60 hover:text-foreground" data-testid="new-project-browse-button">
                   Browse Files
                 </Button>
               </>
             )}
-            <p className="text-xs text-zinc-500">Video up to 500 MB · Audio up to 100 MB · Max 30 minutes</p>
+            <p className="text-xs text-muted-foreground">Video up to 500 MB · Audio up to 100 MB · Max 30 minutes</p>
             {error && (
-              <p role="alert" data-testid="new-project-upload-error" className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+              <p role="alert" data-testid="new-project-upload-error" className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-300">
                 <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" /> {error}
               </p>
             )}
@@ -263,33 +263,33 @@ const NewProject = () => {
       {/* Uploaded file card + preview */}
       {file && uploadState === "complete" && (
         <section aria-label="Uploaded file" className="space-y-4" data-testid="new-project-file-card-section">
-          <div className="flex flex-col gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-3.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               {file.thumbnail ? (
-                <img src={file.thumbnail} alt="" aria-hidden="true" className="aspect-video h-11 w-[72px] shrink-0 rounded-lg border border-white/[0.06] object-cover" />
+                <img src={file.thumbnail} alt="" aria-hidden="true" className="aspect-video h-11 w-[72px] shrink-0 rounded-lg border border-border object-cover" />
               ) : (
-                <div className="flex aspect-video h-11 w-[72px] shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-zinc-400">
+                <div className="flex aspect-video h-11 w-[72px] shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground">
                   {file.kind === "video" ? <Film className="h-4 w-4" aria-hidden="true" /> : <Music className="h-4 w-4" aria-hidden="true" />}
                 </div>
               )}
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-zinc-200">{file.name}</p>
-                <p className="text-xs text-zinc-500">
+                <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
+                <p className="text-xs text-muted-foreground">
                   {file.kind === "video" ? "Video" : "Audio"} · {file.ext} · {fmtSize(file.size)} · {fmtTime(file.duration)}
                 </p>
-                <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-400">
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Upload complete
                 </p>
               </div>
             </div>
             <div className="flex shrink-0 gap-1">
               <Button variant="ghost" size="sm" data-testid="new-project-replace-button"
-                className="h-8 gap-1.5 text-zinc-400 hover:text-zinc-100"
+                className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
                 onClick={() => inputRef.current?.click()}>
                 <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Replace
               </Button>
               <Button variant="ghost" size="sm" data-testid="new-project-remove-button"
-                className="h-8 gap-1.5 text-zinc-500 hover:text-red-400" onClick={removeFile}>
+                className="h-8 gap-1.5 text-muted-foreground hover:text-red-600 dark:text-red-400" onClick={removeFile}>
                 <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Remove
               </Button>
             </div>
@@ -301,7 +301,7 @@ const NewProject = () => {
       {/* Choose action */}
       {file && uploadState === "complete" && (
         <section aria-labelledby="action-heading" data-testid="new-project-action-section">
-          <h2 id="action-heading" className="mb-3 text-sm font-medium uppercase tracking-wide text-zinc-500">What do you want to do?</h2>
+          <h2 id="action-heading" className="mb-3 text-sm font-medium uppercase tracking-wide text-muted-foreground">What do you want to do?</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             {actions.map(a => {
               const selected = action === a.id;
@@ -314,17 +314,17 @@ const NewProject = () => {
                   onClick={() => setAction(a.id)}
                   className={`flex h-full flex-col gap-3 rounded-xl border p-5 text-left transition-colors ${
                     selected
-                      ? "border-zinc-300/60 bg-white/[0.06]"
-                      : "border-white/[0.07] bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.05]"}`}>
+                      ? "border-border bg-muted/30"
+                      : "border-border bg-muted/30 hover:border-muted-foreground/40 hover:bg-muted/60"}`}>
                   <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                    selected ? "bg-zinc-100 text-zinc-900" : "bg-white/[0.06] text-zinc-400"}`}>
+                    selected ? "bg-foreground text-background" : "bg-muted/30 text-muted-foreground"}`}>
                     <a.icon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-zinc-100">{a.title}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-zinc-400">{a.desc}</p>
+                    <p className="text-sm font-semibold text-foreground">{a.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{a.desc}</p>
                   </div>
-                  {selected && <span className="flex items-center gap-1 text-xs font-medium text-zinc-300">
+                  {selected && <span className="flex items-center gap-1 text-xs font-medium text-foreground">
                     <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Selected
                   </span>}
                 </button>
@@ -339,17 +339,17 @@ const NewProject = () => {
         <Card className="border-amber-500/25 bg-amber-500/[0.06]" data-testid="new-project-rights-section">
           <CardContent className="space-y-4 p-5">
             <div className="flex gap-3">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
               <div>
                 <p className="text-xs font-semibold text-amber-300">Voice Rights Notice</p>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   Only upload or clone voices you own or have explicit permission to use. You are solely responsible for
                   voice licensing, consent, and compliance with applicable laws and third-party rights. DreamAgent does
                   not verify voice ownership or authorization.
                 </p>
               </div>
             </div>
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 text-xs leading-relaxed text-zinc-300">
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-muted/30 p-3 text-xs leading-relaxed text-foreground">
               <Checkbox
                 checked={rightsConfirmed}
                 onCheckedChange={v => { setRightsConfirmed(v === true); projectStore.setRights(v === true); }}
@@ -359,7 +359,7 @@ const NewProject = () => {
               <span>I confirm that I have the necessary rights and authorization to use this voice and accept responsibility for its use.</span>
             </label>
             {!rightsConfirmed && (
-              <p className="text-xs text-zinc-500" role="note">You must confirm voice rights before continuing.</p>
+              <p className="text-xs text-muted-foreground" role="note">You must confirm voice rights before continuing.</p>
             )}
           </CardContent>
         </Card>
@@ -397,7 +397,7 @@ const NewProject = () => {
               }
               navigate("/voice-changer");
             }}
-            className="h-9 gap-1.5 rounded-lg bg-zinc-100 px-4 text-zinc-900 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50">
+            className="h-9 gap-1.5 rounded-lg bg-primary px-4 text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
             Continue
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Button>
@@ -434,7 +434,7 @@ const MediaPreview = ({ file }: { file: UploadedFile }) => {
   );
 
   return (
-    <Card className="border-white/[0.07] bg-white/[0.02]" data-testid="new-project-media-preview">
+    <Card className="border-border bg-muted/30" data-testid="new-project-media-preview">
       <CardContent className="space-y-4 p-4">
         {file.kind === "video" ? (
           <video
@@ -448,11 +448,11 @@ const MediaPreview = ({ file }: { file: UploadedFile }) => {
             onEnded={() => setPlaying(false)}
           />
         ) : (
-          <div className="relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.02] p-4" aria-hidden="true">
+          <div className="relative overflow-hidden rounded-lg border border-border bg-muted/30 p-4" aria-hidden="true">
             <div className="flex h-24 items-center gap-1">
               {bars.map((h, i) => (
                 <span key={i}
-                  className={`w-full rounded-sm transition-colors ${i / bars.length <= time / (duration || 1) ? "bg-zinc-300/80" : "bg-white/15"}`}
+                  className={`w-full rounded-sm transition-colors ${i / bars.length <= time / (duration || 1) ? "bg-foreground/60" : "bg-muted"}`}
                   style={{ height: `${h}%` }} />
               ))}
             </div>
@@ -467,10 +467,10 @@ const MediaPreview = ({ file }: { file: UploadedFile }) => {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button variant="secondary" size="sm" onClick={toggle} aria-label={playing ? "Pause" : "Play"}
             data-testid="new-project-preview-play-button"
-            className="h-9 w-9 shrink-0 rounded-full bg-white/[0.08] p-0 text-zinc-100 hover:bg-white/[0.16]">
+            className="h-9 w-9 shrink-0 rounded-full bg-muted/30 p-0 text-foreground hover:bg-muted">
             {playing ? <Pause className="h-4 w-4" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
           </Button>
-          <span className="shrink-0 text-xs tabular-nums text-zinc-400">{fmtTime(time)} / {fmtTime(duration)}</span>
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{fmtTime(time)} / {fmtTime(duration)}</span>
           <Slider
             value={[time]}
             max={duration || 1}
@@ -479,7 +479,7 @@ const MediaPreview = ({ file }: { file: UploadedFile }) => {
             aria-label="Seek timeline"
             className="flex-1" />
           <div className="flex w-32 shrink-0 items-center gap-2">
-            <Volume2 className="h-4 w-4 shrink-0 text-zinc-500" aria-hidden="true" />
+            <Volume2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
             <Slider value={[volume]} max={1} step={0.05}
               onValueChange={([v]) => { setVolume(v); if (ref.current) ref.current.volume = v; }}
               aria-label="Volume" className="flex-1" />

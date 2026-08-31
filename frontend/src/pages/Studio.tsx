@@ -30,10 +30,10 @@ const recentProjects: RecentProject[] = [
 ];
 
 const statusStyle: Record<ProjectStatus, string> = {
-  Ready: "border-zinc-700 bg-zinc-800/60 text-emerald-400",
-  Processing: "border-zinc-700 bg-zinc-800/60 text-amber-400",
-  Draft: "border-zinc-800 bg-zinc-900 text-zinc-500",
-  Published: "border-zinc-700 bg-zinc-800/60 text-zinc-300",
+  Ready: "border-border bg-muted/60 text-emerald-600 dark:text-emerald-400",
+  Processing: "border-border bg-muted/60 text-amber-600 dark:text-amber-400",
+  Draft: "border-border bg-card text-muted-foreground",
+  Published: "border-border bg-muted/60 text-foreground",
 };
 
 const quickActions = [
@@ -51,7 +51,7 @@ const processingSteps = [
   { label: "Final video", state: "pending" },
 ] as const;
 
-const sectionLabel = "mb-4 text-[13px] font-medium text-zinc-400";
+const sectionLabel = "mb-4 text-[13px] font-medium text-muted-foreground";
 
 const Studio = () => {
   const [loading, setLoading] = useState(true);
@@ -73,7 +73,7 @@ const Studio = () => {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center" aria-live="polite">
-        <div className="flex flex-col items-center gap-3 text-zinc-500">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <Loader2 className="h-8 w-8 animate-spin" aria-hidden="true" />
           <p className="text-sm">Loading studio…</p>
         </div>
@@ -86,10 +86,10 @@ const Studio = () => {
       {/* Header */}
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-zinc-100">Voice Studio</h1>
-          <p className="mt-0.5 text-sm text-zinc-500">Transform your recordings with AI voices.</p>
+          <h1 className="text-[22px] font-semibold tracking-tight text-foreground">Voice Studio</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">Transform your recordings with AI voices.</p>
         </div>
-        <Button asChild size="sm" className="h-9 gap-1.5 rounded-lg bg-indigo-500 px-3.5 text-white hover:bg-indigo-400" data-testid="studio-new-project-button">
+        <Button asChild size="sm" className="h-9 gap-1.5 rounded-lg bg-primary px-3.5 text-white hover:bg-primary" data-testid="studio-new-project-button">
           <Link to="/new-project"><Plus className="h-4 w-4" aria-hidden="true" /> New Project</Link>
         </Button>
       </header>
@@ -99,24 +99,24 @@ const Studio = () => {
         <h2 id="qa-heading" className={sectionLabel}>Quick Actions</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map(a => (
-            <Card key={a.title} className="group rounded-xl border-white/[0.07] bg-white/[0.02] transition-colors duration-200 hover:border-white/[0.16] hover:bg-white/[0.04]">
+            <Card key={a.title} className="group rounded-xl border-border bg-muted/30 transition-colors duration-200 hover:border-border hover:bg-muted/60">
               <CardContent className="flex h-full flex-col gap-3 p-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-zinc-400 transition-colors group-hover:text-zinc-200">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground transition-colors group-hover:text-foreground">
                   <a.icon className="h-4 w-4" aria-hidden="true" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-zinc-100">{a.title}</h3>
-                  <p className="mt-1 text-[13px] leading-snug text-zinc-500">{a.desc}</p>
+                  <h3 className="text-sm font-medium text-foreground">{a.title}</h3>
+                  <p className="mt-1 text-[13px] leading-snug text-muted-foreground">{a.desc}</p>
                 </div>
                 {a.to ? (
                   <Link to={a.to}
                     data-testid="studio-change-voice-start-button"
-                    className="mt-auto flex items-center gap-1 pt-1 text-[13px] font-medium text-zinc-400 transition-colors group-hover:text-zinc-100">
+                    className="mt-auto flex items-center gap-1 pt-1 text-[13px] font-medium text-muted-foreground transition-colors group-hover:text-foreground">
                     {a.cta}
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                   </Link>
                 ) : (
-                  <span className="mt-auto flex items-center gap-1 pt-1 text-[13px] font-medium text-zinc-500">
+                  <span className="mt-auto flex items-center gap-1 pt-1 text-[13px] font-medium text-muted-foreground">
                     {a.cta}
                     <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                   </span>
@@ -134,57 +134,57 @@ const Studio = () => {
           <div className="space-y-4">
             <div
               role="button" tabIndex={0} aria-label="Upload media: drag and drop or browse files"
-              className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/[0.12] bg-white/[0.015] px-6 py-10 text-center transition-colors hover:border-white/[0.28] hover:bg-white/[0.03]"
+              className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-transparent px-6 py-10 text-center transition-colors hover:border-muted-foreground/40 hover:bg-muted/60"
             >
-              <Upload className="h-6 w-6 text-zinc-500" aria-hidden="true" />
-              <p className="text-sm font-medium text-zinc-200">Drop your video or audio here</p>
-              <p className="text-xs text-zinc-500">MP4 · MOV · MP3 · WAV · M4A</p>
-              <Button variant="outline" size="sm" className="h-8 rounded-lg border-white/[0.14] bg-transparent text-zinc-300 hover:bg-white/[0.06] hover:text-zinc-100">
+              <Upload className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+              <p className="text-sm font-medium text-foreground">Drop your video or audio here</p>
+              <p className="text-xs text-muted-foreground">MP4 · MOV · MP3 · WAV · M4A</p>
+              <Button variant="outline" size="sm" className="h-8 rounded-lg border-border bg-transparent text-foreground hover:bg-muted/60 hover:text-foreground">
                 Browse Files
               </Button>
-              <p className="text-xs text-zinc-500">Video up to 500 MB · Audio up to 100 MB · Max 30 minutes</p>
+              <p className="text-xs text-muted-foreground">Video up to 500 MB · Audio up to 100 MB · Max 30 minutes</p>
             </div>
-            <div className="flex flex-col gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-3.5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-zinc-400">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground">
                   <Film className="h-4 w-4" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-zinc-200">{file.name}</p>
-                  <p className="text-xs text-zinc-500">{file.duration} · {file.res} · {file.audio}</p>
+                  <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
+                  <p className="text-xs text-muted-foreground">{file.duration} · {file.res} · {file.audio}</p>
                 </div>
               </div>
               <div className="flex shrink-0 gap-1">
-                <Button variant="ghost" size="sm" className="h-8 text-zinc-400 hover:text-zinc-100">Replace</Button>
-                <Button variant="ghost" size="sm" className="h-8 text-zinc-500 hover:text-red-400">Remove</Button>
+                <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-foreground">Replace</Button>
+                <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-red-600 dark:text-red-400">Remove</Button>
               </div>
             </div>
-            <Button onClick={() => setShowProcessing(true)} size="sm" className="h-9 gap-1.5 rounded-lg bg-zinc-100 px-4 text-zinc-900 hover:bg-white">
+            <Button onClick={() => setShowProcessing(true)} size="sm" className="h-9 gap-1.5 rounded-lg bg-primary px-4 text-primary-foreground hover:bg-primary/90">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Generate Voice
             </Button>
           </div>
         ) : (
-          <Card className="rounded-xl border-white/[0.07] bg-white/[0.02]">
+          <Card className="rounded-xl border-border bg-muted/30">
             <CardContent className="space-y-5 p-5" role="status" aria-live="polite">
               <div>
-                <h3 className="text-sm font-semibold text-zinc-100">Creating your new voice track</h3>
+                <h3 className="text-sm font-semibold text-foreground">Creating your new voice track</h3>
                 <div className="mt-3 flex items-center gap-3">
                   <Progress value={progress} className="h-1.5 flex-1" />
-                  <span className="text-xs tabular-nums text-zinc-400">{progress}%</span>
+                  <span className="text-xs tabular-nums text-muted-foreground">{progress}%</span>
                 </div>
               </div>
               <ul className="space-y-2">
                 {processingSteps.map(s => (
                   <li key={s.label} className="flex items-center gap-2.5 text-sm">
-                    {s.state === "done" && <CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden="true" />}
-                    {s.state === "active" && <Loader2 className="h-4 w-4 animate-spin text-amber-400" aria-hidden="true" />}
-                    {s.state === "pending" && <span className="h-4 w-4 rounded-full border border-white/15" aria-hidden="true" />}
-                    <span className={s.state === "pending" ? "text-zinc-500" : "text-zinc-300"}>{s.label}</span>
+                    {s.state === "done" && <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />}
+                    {s.state === "active" && <Loader2 className="h-4 w-4 animate-spin text-amber-600 dark:text-amber-400" aria-hidden="true" />}
+                    {s.state === "pending" && <span className="h-4 w-4 rounded-full border border-border" aria-hidden="true" />}
+                    <span className={s.state === "pending" ? "text-muted-foreground" : "text-foreground"}>{s.label}</span>
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-zinc-500">Keep this window open while your voice track is being prepared.</p>
-              <Button variant="ghost" size="sm" onClick={() => { setShowProcessing(false); setProgress(67); }} className="text-zinc-500 hover:text-red-400">Cancel</Button>
+              <p className="text-xs text-muted-foreground">Keep this window open while your voice track is being prepared.</p>
+              <Button variant="ghost" size="sm" onClick={() => { setShowProcessing(false); setProgress(67); }} className="text-muted-foreground hover:text-red-600 dark:text-red-400">Cancel</Button>
             </CardContent>
           </Card>
         )}
@@ -193,14 +193,14 @@ const Studio = () => {
       {/* Recent projects */}
       <section aria-labelledby="recent-heading">
         <div className="mb-4 flex items-center justify-between">
-          <h2 id="recent-heading" className="text-[13px] font-medium text-zinc-400">Recent Projects</h2>
-          <Link to="/projects" className="text-[13px] text-zinc-400 transition-colors hover:text-zinc-100">View all</Link>
+          <h2 id="recent-heading" className="text-[13px] font-medium text-muted-foreground">Recent Projects</h2>
+          <Link to="/projects" className="text-[13px] text-muted-foreground transition-colors hover:text-foreground">View all</Link>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {recentProjects.map(p => (
-            <Card key={p.id} className="group rounded-xl border-white/[0.07] bg-white/[0.02] transition-colors duration-200 hover:border-white/[0.16] hover:bg-white/[0.04]">
+            <Card key={p.id} className="group rounded-xl border-border bg-muted/30 transition-colors duration-200 hover:border-border hover:bg-muted/60">
               <CardContent className="flex gap-4 p-3.5">
-                <div className="relative aspect-video w-28 shrink-0 overflow-hidden rounded-lg border border-white/[0.06]" style={{ background: `linear-gradient(135deg, hsl(${p.hue} 30% 18%), hsl(${p.hue + 40} 25% 10%))` }}>
+                <div className="relative aspect-video w-28 shrink-0 overflow-hidden rounded-lg border border-border" style={{ background: `linear-gradient(135deg, hsl(${p.hue} 30% 18%), hsl(${p.hue + 40} 25% 10%))` }}>
                   <span className="absolute inset-0 flex items-center justify-center">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors group-hover:bg-black/60">
                       <Play className="h-3 w-3 text-white/90" aria-hidden="true" />
@@ -210,18 +210,18 @@ const Studio = () => {
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col py-0.5">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="truncate text-sm font-medium text-zinc-100">{p.name}</h3>
+                    <h3 className="truncate text-sm font-medium text-foreground">{p.name}</h3>
                     <Badge variant="outline" className={`shrink-0 rounded-md border px-1.5 py-0 text-xs font-medium uppercase tracking-wide ${statusStyle[p.status]}`}>
                       {p.status === "Processing" && <Loader2 className="mr-1 h-2.5 w-2.5 animate-spin" aria-hidden="true" />}
                       {p.status}
                     </Badge>
                   </div>
-                  <p className="mt-1 truncate text-xs text-zinc-500">{p.voice} · {p.language}</p>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">{p.voice} · {p.language}</p>
                   <div className="mt-auto flex items-center justify-between pt-2">
-                    <span className="flex items-center gap-1 text-xs text-zinc-500">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" aria-hidden="true" /> {p.edited}
                     </span>
-                    <span className="flex items-center gap-0.5 text-xs font-medium text-zinc-400 transition-colors group-hover:text-zinc-100">
+                    <span className="flex items-center gap-0.5 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
                       Open <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                     </span>
                   </div>
@@ -234,10 +234,10 @@ const Studio = () => {
 
       {/* Rights notice */}
       <div className="flex gap-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
         <div>
           <p className="text-xs font-medium text-amber-300/90">Voice Rights Notice</p>
-          <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Only upload or clone voices you own or have explicit permission to use. You are solely responsible for voice licensing, consent, and compliance with applicable laws and third-party rights. DreamAgent does not verify voice ownership or authorization.
           </p>
         </div>

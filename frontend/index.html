@@ -4,6 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- TODO: Set the document title to the name of your application -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('dreamvoice-theme');
+          var dark = t === 'dark' || t == null || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (e) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
     <title>DreamVoice — AI Voice Studio</title>
     <meta name="description" content="DreamPilot Final Validation - Generated Project" />
     <meta name="author" content="DreamPilot Final Validation" />

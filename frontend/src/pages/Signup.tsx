@@ -38,17 +38,17 @@ export default function Signup() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0a0b0f] p-4 text-zinc-100">
+    <main className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground">
       <div
         data-testid="signup-page"
-        className="w-full max-w-md space-y-6 rounded-2xl border border-white/10 bg-[#0d0f14] p-8"
+        className="w-full max-w-md space-y-6 rounded-2xl border border-border bg-card p-8"
       >
         <div className="space-y-2 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/15">
-            <AudioWaveform className="h-7 w-7 text-indigo-400" aria-hidden="true" />
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15">
+            <AudioWaveform className="h-7 w-7 text-primary" aria-hidden="true" />
           </div>
           <h1 className="text-2xl font-bold">Create your account</h1>
-          <p className="text-sm text-zinc-400">Start converting voices with DreamVoice</p>
+          <p className="text-sm text-muted-foreground">Start converting voices with DreamVoice</p>
         </div>
 
         <form onSubmit={submit} className="space-y-4" noValidate>
@@ -97,7 +97,7 @@ export default function Signup() {
           </div>
 
           {error && (
-            <p data-testid="signup-error" role="alert" className="text-sm text-red-400">
+            <p data-testid="signup-error" role="alert" className="text-sm text-red-600 dark:text-red-400">
               {error}
             </p>
           )}
@@ -113,11 +113,11 @@ export default function Signup() {
           </Button>
         </form>
 
-        <p className="text-center text-sm text-zinc-400">
+        <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
           <Link
             to="/login"
-            className="text-indigo-400 hover:text-indigo-300"
+            className="text-primary hover:text-primary"
             data-testid="signup-login-link"
           >
             Sign in
