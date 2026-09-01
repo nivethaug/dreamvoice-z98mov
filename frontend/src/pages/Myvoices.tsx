@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Mic2, Library, Plus, ShieldCheck, Search, Play, CheckCircle2,
-  AlertTriangle, Loader2, X, RefreshCw,
+  AlertTriangle, Loader2, X, RefreshCw, Calendar, Globe, Tag, MoreVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -105,7 +105,7 @@ const Myvoices = () => {
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-[32px] font-bold leading-tight tracking-tight text-foreground">My Voices</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{voices.length} voice{voices.length === 1 ? "" : "s"} saved in your account.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Voices saved in your account ({voices.length})</p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={load} data-testid="my-voices-refresh-button"
@@ -118,19 +118,6 @@ const Myvoices = () => {
           </Button>
         </div>
       </header>
-
-      {/* Info banner */}
-      <div className="flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/[0.07] p-4" data-testid="my-voices-info-banner">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15">
-          <Mic2 className="h-4 w-4 text-primary" aria-hidden="true" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-foreground">Voice Cloning</p>
-          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-            Create a custom voice from a short reference recording. Cloned voices work everywhere — Voice Changer, Dubbing, and Projects.
-          </p>
-        </div>
-      </div>
 
       {/* Search / sort */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between" data-testid="my-voices-controls">
@@ -182,44 +169,85 @@ const Myvoices = () => {
           <div className="space-y-3" data-testid="my-voices-grid">
           {filtered.map(v => (
             <div key={v.voice_id}
-              className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-muted/20 p-4 transition-colors hover:border-border hover:bg-muted/40 md:flex-nowrap"
+              className="relative flex flex-col gap-6 rounded-2xl border border-border bg-card/60 p-6 transition-colors hover:border-border hover:bg-card md:flex-row md:items-center md:gap-6 lg:gap-8"
               data-testid={`my-voices-row-${v.voice_id}`}>
-              {/* Play button */}
-              <button
-                type="button"
-                aria-label={`Preview ${v.name}`}
-                data-testid={`my-voices-play-${v.voice_id}`}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/25 transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                onClick={() => useVoice(v)}>
-                <Play className="ml-0.5 h-4 w-4 fill-current" aria-hidden="true" />
-              </button>
-              {/* Waveform */}
-              <div className="hidden h-10 w-40 shrink-0 items-center gap-[3px] sm:flex" aria-hidden="true"
-                style={{ color: `hsl(${hueFor(v.voice_id)} 70% 68%)` }}>
-                {waveBarsFor(v.voice_id).map((h, i) => (
-                  <span key={i} className="w-[3px] rounded-full bg-current" style={{ height: `${Math.round(h * 100)}%`, opacity: 0.35 + h * 0.65 }} />
-                ))}
-              </div>
-              {/* Name + chips + metadata */}
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="truncate text-sm font-semibold text-foreground">{v.name}</h3>
-                  <Badge variant="outline" className={`gap-1 rounded-full px-2 py-0 text-[10px] uppercase tracking-wide ${v.authorized ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "border-primary/30 bg-primary/10 text-primary"}`}>
-                    {v.authorized ? <><ShieldCheck className="h-3 w-3" aria-hidden="true" /> Authorized</> : "No reference audio"}
-                  </Badge>
+              {/* Zone 1 — info */}
+              <div className="flex min-w-0 flex-1 items-start gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-emerald-500/25 bg-emerald-500/10"
+                  style={{ color: `hsl(${hueFor(v.voice_id)} 65% 60%)` }} aria-hidden="true">
+                  <Mic2 className="h-6 w-6" />
                 </div>
-                <p className="mt-1 truncate text-xs text-muted-foreground">
-                  {v.voice_type}{(v.languages || []).length > 0 && ` · ${(v.languages || []).join(", ")}`}
-                  {v.reference_duration != null && ` · Reference ${formatDuration(v.reference_duration)}`}
-                  {v.description && ` · ${v.description}`}
-                </p>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="truncate text-[15px] font-semibold text-foreground">{v.name}</h3>
+                    <Badge variant="outline" className="rounded-full border-primary/30 bg-primary/10 px-2 py-0 text-[10px] font-medium normal-case text-primary">Personal</Badge>
+                  </div>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
+                    {(v.languages || []).length > 0 ? v.languages.join(" • ") : v.voice_type}
+                  </p>
+                  {v.description && <p className="mt-1 truncate text-xs text-muted-foreground/80">{v.description}</p>}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className={`gap-1 rounded-md px-2 py-0.5 text-[10px] ${v.authorized ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500" : "border-muted-foreground/30 text-muted-foreground"}`}>
+                      {v.authorized ? <><ShieldCheck className="h-3 w-3" aria-hidden="true" /> Authorized</> : "Not authorized"}
+                    </Badge>
+                    {v.reference_duration != null && (
+                      <Badge variant="outline" className="rounded-md border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+                        Reference {formatDuration(v.reference_duration)}
+                      </Badge>
+                    )}
+                  </div>
+                  <Button variant="secondary" size="sm" onClick={() => useVoice(v)}
+                    data-testid={`my-voices-use-${v.voice_id}`}
+                    className="mt-3 h-8 gap-1.5 rounded-lg border-border bg-muted/40 px-3 text-xs font-medium text-foreground hover:bg-muted/60">
+                    <Play className="h-3 w-3 fill-current" aria-hidden="true" /> Use Voice
+                  </Button>
+                </div>
               </div>
-              {/* Actions */}
-              <Button variant="secondary" size="sm" onClick={() => useVoice(v)}
-                data-testid={`my-voices-use-${v.voice_id}`}
-                className="h-8 shrink-0 gap-1.5 rounded-lg border-border bg-muted/30 text-xs text-foreground hover:bg-muted/60 hover:text-foreground">
-                Use Voice
-              </Button>
+              {/* Zone 2 — play + waveform */}
+              <div className="flex shrink-0 flex-col items-center gap-2 md:w-[220px] lg:w-[300px]">
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    aria-label={`Preview ${v.name}`}
+                    data-testid={`my-voices-play-${v.voice_id}`}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/25 transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => useVoice(v)}>
+                    <Play className="ml-0.5 h-4 w-4 fill-current" aria-hidden="true" />
+                  </button>
+                  <div className="flex h-12 w-32 items-center gap-[3px] text-muted-foreground/70 md:w-36 lg:w-56" aria-hidden="true">
+                    {waveBarsFor(v.voice_id).map((h, i) => (
+                      <span key={i} className="w-[3px] rounded-full bg-current" style={{ height: `${Math.round(h * 100)}%`, opacity: 0.3 + h * 0.6 }} />
+                    ))}
+                  </div>
+                </div>
+                <span className="text-[11px] text-muted-foreground">
+                  0:00 / {v.reference_duration != null ? formatDuration(v.reference_duration) : "1:00"}
+                </span>
+              </div>
+              {/* Zone 3 — metadata */}
+              <div className="flex shrink-0 flex-col gap-2.5 md:pr-6">
+                <div className="flex items-center gap-2 text-xs">
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  <span className="text-muted-foreground">Created</span>
+                  <span className="ml-auto pl-4 text-foreground">{(v.created_at || "").slice(0, 10)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <Globe className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  <span className="text-muted-foreground">Language</span>
+                  <span className="ml-auto pl-4 text-foreground">{(v.languages || []).join(", ") || "—"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <Tag className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  <span className="text-muted-foreground">Type</span>
+                  <span className="ml-auto pl-4 text-foreground">{v.voice_type || "Personal Voice"}</span>
+                </div>
+              </div>
+              {/* Overflow menu */}
+              <button type="button" aria-label={`More options for ${v.name}`}
+                data-testid={`my-voices-more-${v.voice_id}`}
+                className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <MoreVertical className="h-4 w-4" aria-hidden="true" />
+              </button>
             </div>
           ))}
           </div>
