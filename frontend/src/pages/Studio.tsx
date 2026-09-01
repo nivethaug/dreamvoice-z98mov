@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AudioWaveform, Mic2, Languages, FileText, Plus, Play, Clock,
-  CheckCircle2, Loader2, Upload, Film, AlertTriangle, Sparkles, ArrowRight
+  CheckCircle2, Loader2, Upload, Film, AlertTriangle, Sparkles, ArrowRight,
+  Timer, Monitor, Volume2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,13 +52,13 @@ const processingSteps = [
   { label: "Final video", state: "pending" },
 ] as const;
 
-const sectionLabel = "mb-4 text-[13px] font-medium text-muted-foreground";
+const sectionLabel = "mb-4 text-[15px] font-semibold text-foreground";
 
 const Studio = () => {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(67);
   const [showProcessing, setShowProcessing] = useState(false);
-  const [file] = useState({ name: "dreamagent-demo.mp4", duration: "04:32", res: "1080p", audio: "48 kHz audio" });
+  const [file] = useState({ name: "dreamagent-demo.mp4", duration: "04:32", res: "1080p", audio: "48 kHz", size: "68.4 MB" });
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 600);
@@ -101,22 +102,22 @@ const Studio = () => {
           {quickActions.map(a => (
             <Card key={a.title} className="group rounded-xl border-border bg-muted/30 transition-colors duration-200 hover:border-border hover:bg-muted/60">
               <CardContent className="flex h-full flex-col gap-3 p-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground transition-colors group-hover:text-foreground">
-                  <a.icon className="h-4 w-4" aria-hidden="true" />
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/10 text-primary transition-colors group-hover:border-primary/40">
+                    <a.icon className="h-4 w-4" aria-hidden="true" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground">{a.title}</h3>
                 </div>
-                <div>
-                  <h3 className="text-sm font-medium text-foreground">{a.title}</h3>
-                  <p className="mt-1 text-[13px] leading-snug text-muted-foreground">{a.desc}</p>
-                </div>
+                <p className="text-[13px] leading-snug text-muted-foreground">{a.desc}</p>
                 {a.to ? (
                   <Link to={a.to}
                     data-testid="studio-change-voice-start-button"
-                    className="mt-auto flex items-center gap-1 pt-1 text-[13px] font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+                    className="mt-auto flex items-center gap-1 pt-1 text-[13px] font-medium text-foreground/80 transition-colors hover:text-foreground">
                     {a.cta}
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                   </Link>
                 ) : (
-                  <span className="mt-auto flex items-center gap-1 pt-1 text-[13px] font-medium text-muted-foreground">
+                  <span className="mt-auto flex items-center gap-1 pt-1 text-[13px] font-medium text-foreground/80">
                     {a.cta}
                     <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                   </span>
@@ -151,12 +152,17 @@ const Studio = () => {
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">{file.duration} · {file.res} · {file.audio}</p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><Timer className="h-3 w-3" aria-hidden="true" />{file.duration}</span>
+                    <span className="flex items-center gap-1"><Monitor className="h-3 w-3" aria-hidden="true" />{file.res}</span>
+                    <span className="flex items-center gap-1"><Volume2 className="h-3 w-3" aria-hidden="true" />{file.audio}</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex shrink-0 gap-1">
-                <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-foreground">Replace</Button>
-                <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-red-600 dark:text-red-400">Remove</Button>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="hidden text-xs tabular-nums text-muted-foreground sm:block">{file.size}</span>
+                <Button variant="outline" size="sm" className="h-8 rounded-lg border-border bg-transparent text-foreground hover:bg-muted/60 hover:text-foreground">Replace</Button>
+                <Button variant="outline" size="sm" className="h-8 rounded-lg border-red-500/30 bg-red-500/[0.06] text-red-500 hover:bg-red-500/15 hover:text-red-400 dark:text-red-400">Remove</Button>
               </div>
             </div>
             <Button onClick={() => setShowProcessing(true)} size="sm" className="h-9 gap-1.5 rounded-lg bg-primary px-4 text-primary-foreground hover:bg-primary/90">
@@ -193,7 +199,7 @@ const Studio = () => {
       {/* Recent projects */}
       <section aria-labelledby="recent-heading">
         <div className="mb-4 flex items-center justify-between">
-          <h2 id="recent-heading" className="text-[13px] font-medium text-muted-foreground">Recent Projects</h2>
+          <h2 id="recent-heading" className="text-[15px] font-semibold text-foreground">Recent Projects</h2>
           <Link to="/projects" className="text-[13px] text-muted-foreground transition-colors hover:text-foreground">View all</Link>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
