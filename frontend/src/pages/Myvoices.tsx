@@ -257,11 +257,16 @@ const Myvoices = () => {
       {/* Create next voice panel */}
       <button type="button" onClick={() => navigate("/voices/create")}
         data-testid="my-voices-create-panel"
-        className="flex w-full items-center justify-center gap-3 rounded-xl border border-dashed border-primary/40 bg-primary/[0.04] p-6 text-muted-foreground transition-colors hover:border-primary/60 hover:bg-primary/[0.08] hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary">
-          <Plus className="h-4 w-4" aria-hidden="true" />
+        className="flex w-full flex-col items-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-primary/[0.03] px-6 py-10 transition-colors hover:border-primary/60 hover:bg-primary/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full border border-primary/50 bg-primary/10 text-primary">
+          <Plus className="h-5 w-5" aria-hidden="true" />
         </span>
-        <span className="text-sm font-medium">Create your next voice</span>
+        <span className="text-lg font-bold text-foreground">Create your next voice</span>
+        <span className="text-sm text-muted-foreground">Clone your voice or create a new one from an authorized sample.</span>
+        <span className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm">
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Create Voice
+        </span>
       </button>
 
       <Card className="rounded-xl border-amber-500/25 bg-amber-500/[0.06]" data-testid="my-voices-rights-notice">
