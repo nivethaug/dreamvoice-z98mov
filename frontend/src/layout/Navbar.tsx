@@ -38,9 +38,9 @@ const soonLinks = [
 ];
 
 const navLinkCls = ({ isActive }: { isActive: boolean }) =>
-  `rounded-md px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+  `relative rounded-md px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
     isActive
-      ? "bg-primary/10 font-medium text-foreground"
+      ? "font-semibold text-foreground after:absolute after:inset-x-2 after:-bottom-3.5 after:h-[2.5px] after:rounded-full after:bg-primary"
       : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
   }`;
 
@@ -84,8 +84,10 @@ const AppHeader = () => {
               title="Available in a future release"
               aria-disabled="true"
               className="cursor-not-allowed rounded-md px-3 py-1.5 text-sm text-muted-foreground/80"
+              data-testid={`navbar-link-${l.label.toLowerCase().replace(/\s+/g, "-")}-soon`}
             >
               {l.label}
+              <sup className="ml-1 rounded bg-muted/60 px-1 py-px text-[9px] font-medium uppercase text-muted-foreground">Soon</sup>
             </span>
           ))}
         </nav>
@@ -226,6 +228,7 @@ const AppHeader = () => {
               className="flex min-h-[44px] items-center gap-3 rounded-md px-3 text-sm text-muted-foreground/80"
             >
               <Icon className="h-4 w-4" aria-hidden="true" /> {label}
+              <span className="ml-auto rounded bg-muted/60 px-1.5 py-px text-[9px] font-medium uppercase text-muted-foreground">Soon</span>
             </div>
           ))}
           <div className="my-2 border-t border-border" />

@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Mic2, Library, Plus, ShieldCheck, CheckCircle2, Search, MoreVertical,
+  Mic2, Library, Plus, ShieldCheck, Search, Play, CheckCircle2,
   AlertTriangle, Loader2, X, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { listVoices, type BackendVoice } from "@/lib/backend";
 
 type Sort = "Recently Added" | "Name";
@@ -21,6 +20,13 @@ const formatDuration = (s: number | null) => {
 };
 
 const hueFor = (id: number) => (id * 47) % 360;
+
+const waveBarsFor = (id: number) =>
+  Array.from({ length: 32 }, (_, i) => {
+    const x = Math.sin((id * 7 + i * 3.7) * 1.3) * 0.5 + 0.5;
+    const y = Math.cos((id * 11 + i * 2.1) * 0.9) * 0.5 + 0.5;
+    return 0.2 + (x * 0.6 + y * 0.4) * 0.8;
+  });
 
 const Myvoices = () => {
   const navigate = useNavigate();
@@ -98,8 +104,8 @@ const Myvoices = () => {
 
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-foreground">My Voices</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Voices saved in your account ({voices.length}).</p>
+          <h1 className="text-[32px] font-bold leading-tight tracking-tight text-foreground">My Voices</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{voices.length} voice{voices.length === 1 ? "" : "s"} saved in your account.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={load} data-testid="my-voices-refresh-button"
@@ -112,6 +118,19 @@ const Myvoices = () => {
           </Button>
         </div>
       </header>
+
+      {/* Info banner */}
+      <div className="flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/[0.07] p-4" data-testid="my-voices-info-banner">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15">
+          <Mic2 className="h-4 w-4 text-primary" aria-hidden="true" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Voice Cloning</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+            Create a custom voice from a short reference recording. Cloned voices work everywhere — Voice Changer, Dubbing, and Projects.
+          </p>
+        </div>
+      </div>
 
       {/* Search / sort */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between" data-testid="my-voices-controls">
@@ -158,59 +177,64 @@ const Myvoices = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="my-voices-grid">
+        <section className="space-y-3">
+          <h2 className="text-[15px] font-bold text-foreground">Voice Library <span className="font-normal text-muted-foreground">({filtered.length})</span></h2>
+          <div className="space-y-3" data-testid="my-voices-grid">
           {filtered.map(v => (
-            <Card key={v.voice_id}
-              className="rounded-xl border-border bg-muted/30 transition-colors duration-200 hover:border-border hover:bg-muted/60"
-              data-testid={`my-voices-card-${v.voice_id}`}>
-              <CardContent className="space-y-3.5 p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-                    style={{ background: `hsl(${hueFor(v.voice_id)} 45% 55% / 0.16)`, color: `hsl(${hueFor(v.voice_id)} 70% 72%)` }}>
-                    <Mic2 className="h-[18px] w-[18px]" aria-hidden="true" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-sm font-medium text-foreground">{v.name}</h3>
-                    <p className="text-xs text-muted-foreground">{v.voice_type}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{(v.languages || []).join(" · ")}</p>
-                    {v.description && <p className="mt-0.5 truncate text-xs text-muted-foreground">{v.description}</p>}
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" aria-label={`More options for ${v.name}`}
-                        data-testid={`my-voices-more-${v.voice_id}`} className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
-                        <MoreVertical className="h-4 w-4" aria-hidden="true" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="border-border bg-card text-foreground">
-                      <DropdownMenuItem onClick={() => useVoice(v)}>
-                        <Mic2 className="mr-2 h-3.5 w-3.5" aria-hidden="true" /> Use in Voice Changer
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+            <div key={v.voice_id}
+              className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-muted/20 p-4 transition-colors hover:border-border hover:bg-muted/40 md:flex-nowrap"
+              data-testid={`my-voices-row-${v.voice_id}`}>
+              {/* Play button */}
+              <button
+                type="button"
+                aria-label={`Preview ${v.name}`}
+                data-testid={`my-voices-play-${v.voice_id}`}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/25 transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={() => useVoice(v)}>
+                <Play className="ml-0.5 h-4 w-4 fill-current" aria-hidden="true" />
+              </button>
+              {/* Waveform */}
+              <div className="hidden h-10 w-40 shrink-0 items-center gap-[3px] sm:flex" aria-hidden="true"
+                style={{ color: `hsl(${hueFor(v.voice_id)} 70% 68%)` }}>
+                {waveBarsFor(v.voice_id).map((h, i) => (
+                  <span key={i} className="w-[3px] rounded-full bg-current" style={{ height: `${Math.round(h * 100)}%`, opacity: 0.35 + h * 0.65 }} />
+                ))}
+              </div>
+              {/* Name + chips + metadata */}
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className={`gap-1 ${v.authorized ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "border-primary/30 bg-primary/10 text-primary"}`}>
+                  <h3 className="truncate text-sm font-semibold text-foreground">{v.name}</h3>
+                  <Badge variant="outline" className={`gap-1 rounded-full px-2 py-0 text-[10px] uppercase tracking-wide ${v.authorized ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "border-primary/30 bg-primary/10 text-primary"}`}>
                     {v.authorized ? <><ShieldCheck className="h-3 w-3" aria-hidden="true" /> Authorized</> : "No reference audio"}
                   </Badge>
-                  {v.reference_duration != null && (
-                    <Badge variant="outline" className="rounded-md border-border bg-muted/30 px-1.5 py-0 text-xs font-normal text-muted-foreground">
-                      Reference {formatDuration(v.reference_duration)}
-                    </Badge>
-                  )}
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => useVoice(v)}
-                    data-testid={`my-voices-use-${v.voice_id}`}
-                    className="h-8 gap-1.5 rounded-lg border-border bg-muted/30 text-xs text-foreground hover:bg-muted/60 hover:text-foreground">
-                    Use Voice
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                <p className="mt-1 truncate text-xs text-muted-foreground">
+                  {v.voice_type}{(v.languages || []).length > 0 && ` · ${(v.languages || []).join(", ")}`}
+                  {v.reference_duration != null && ` · Reference ${formatDuration(v.reference_duration)}`}
+                  {v.description && ` · ${v.description}`}
+                </p>
+              </div>
+              {/* Actions */}
+              <Button variant="secondary" size="sm" onClick={() => useVoice(v)}
+                data-testid={`my-voices-use-${v.voice_id}`}
+                className="h-8 shrink-0 gap-1.5 rounded-lg border-border bg-muted/30 text-xs text-foreground hover:bg-muted/60 hover:text-foreground">
+                Use Voice
+              </Button>
+            </div>
           ))}
-        </div>
+          </div>
+        </section>
       )}
+
+      {/* Create next voice panel */}
+      <button type="button" onClick={() => navigate("/voices/create")}
+        data-testid="my-voices-create-panel"
+        className="flex w-full items-center justify-center gap-3 rounded-xl border border-dashed border-primary/40 bg-primary/[0.04] p-6 text-muted-foreground transition-colors hover:border-primary/60 hover:bg-primary/[0.08] hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary">
+          <Plus className="h-4 w-4" aria-hidden="true" />
+        </span>
+        <span className="text-sm font-medium">Create your next voice</span>
+      </button>
 
       <Card className="rounded-xl border-amber-500/25 bg-amber-500/[0.06]" data-testid="my-voices-rights-notice">
         <CardContent className="flex gap-3 p-4">
