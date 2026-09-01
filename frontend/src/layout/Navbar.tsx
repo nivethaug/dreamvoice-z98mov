@@ -38,10 +38,10 @@ const soonLinks = [
 ];
 
 const navLinkCls = ({ isActive }: { isActive: boolean }) =>
-  `rounded-md px-3 py-1.5 text-sm transition-colors ${
+  `rounded-md px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
     isActive
-      ? "bg-muted/30 font-medium text-foreground"
-      : "text-muted-foreground hover:text-foreground"
+      ? "bg-primary/10 font-medium text-foreground"
+      : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
   }`;
 
 const AppHeader = () => {
@@ -62,7 +62,7 @@ const AppHeader = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-2 px-4 md:px-6">
+      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-2 px-4 md:px-6">
         {/* Logo */}
         <NavLink to="/" className="mr-2 flex shrink-0 items-center gap-2" aria-label="DreamVoice home">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
