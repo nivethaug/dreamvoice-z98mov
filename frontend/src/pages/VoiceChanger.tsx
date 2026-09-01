@@ -235,7 +235,7 @@ const VoiceChanger = () => {
     25 + Math.abs(Math.sin(i * 0.63) * 35) + Math.abs(Math.sin(i * 0.19)) * 40);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8" data-testid="voice-changer-page">
+    <div className="mx-auto w-full max-w-[1120px] space-y-6 p-5 md:p-10" data-testid="voice-changer-page">
       {toast && (
         <div role="status" aria-live="polite"
           className={`fixed right-4 top-4 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-xl backdrop-blur ${
