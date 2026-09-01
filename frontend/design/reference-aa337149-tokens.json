@@ -1,0 +1,52 @@
+{
+  "width": 1280,
+  "height": 853,
+  "dominantColors": [
+    {
+      "hex": "#060911",
+      "share": "31.3%"
+    },
+    {
+      "hex": "#0c0f17",
+      "share": "10.5%"
+    },
+    {
+      "hex": "#0d1018",
+      "share": "9.2%"
+    },
+    {
+      "hex": "#0b0e16",
+      "share": "5.1%"
+    },
+    {
+      "hex": "#0e121a",
+      "share": "4.8%"
+    },
+    {
+      "hex": "#070a12",
+      "share": "2.2%"
+    },
+    {
+      "hex": "#0e1119",
+      "share": "2.1%"
+    },
+    {
+      "hex": "#0a0d15",
+      "share": "1.6%"
+    },
+    {
+      "hex": "#0f131b",
+      "share": "1.6%"
+    },
+    {
+      "hex": "#080911",
+      "share": "1.4%"
+    }
+  ],
+  "zoomBands": [
+    "reference-aa337149-band-1.png",
+    "reference-aa337149-band-2.png",
+    "reference-aa337149-band-3.png",
+    "reference-aa337149-band-4.png"
+  ]
+}
