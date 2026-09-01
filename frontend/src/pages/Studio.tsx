@@ -87,7 +87,7 @@ const Studio = () => {
       {/* Header */}
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-foreground">Voice Studio</h1>
+          <h1 className="text-[26px] font-semibold tracking-tight text-foreground md:text-[28px]">Voice Studio</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Transform your recordings with AI voices.</p>
         </div>
         <Button asChild size="sm" className="h-9 gap-1.5 rounded-lg bg-primary px-3.5 text-white hover:bg-primary" data-testid="studio-new-project-button">
@@ -101,7 +101,7 @@ const Studio = () => {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map(a => (
             <Card key={a.title} className="group rounded-xl border-border bg-muted/30 transition-colors duration-200 hover:border-border hover:bg-muted/60">
-              <CardContent className="flex h-full flex-col gap-3 p-4">
+              <CardContent className="flex h-full min-h-[168px] flex-col gap-3 p-5">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary/10 text-primary transition-colors group-hover:border-primary/40">
                     <a.icon className="h-4 w-4" aria-hidden="true" />
@@ -135,9 +135,11 @@ const Studio = () => {
           <div className="space-y-4">
             <div
               role="button" tabIndex={0} aria-label="Upload media: drag and drop or browse files"
-              className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-transparent px-6 py-10 text-center transition-colors hover:border-muted-foreground/40 hover:bg-muted/60"
+              className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-indigo-400/25 bg-indigo-500/[0.05] px-6 py-10 text-center transition-colors hover:border-indigo-400/45 hover:bg-indigo-500/[0.09]"
             >
-              <Upload className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-indigo-400/30 bg-indigo-500/15 text-indigo-300">
+                <Upload className="h-5 w-5" aria-hidden="true" />
+              </span>
               <p className="text-sm font-medium text-foreground">Drop your video or audio here</p>
               <p className="text-xs text-muted-foreground">MP4 · MOV · MP3 · WAV · M4A</p>
               <Button variant="outline" size="sm" className="h-8 rounded-lg border-border bg-transparent text-foreground hover:bg-muted/60 hover:text-foreground">
@@ -162,7 +164,7 @@ const Studio = () => {
               <div className="flex shrink-0 items-center gap-2">
                 <span className="hidden text-xs tabular-nums text-muted-foreground sm:block">{file.size}</span>
                 <Button variant="outline" size="sm" className="h-8 rounded-lg border-border bg-transparent text-foreground hover:bg-muted/60 hover:text-foreground">Replace</Button>
-                <Button variant="outline" size="sm" className="h-8 rounded-lg border-red-500/30 bg-red-500/[0.06] text-red-500 hover:bg-red-500/15 hover:text-red-400 dark:text-red-400">Remove</Button>
+                <Button size="sm" className="h-8 rounded-lg border border-red-500/30 bg-red-500/15 text-red-400 hover:bg-red-500/25 hover:text-red-300">Remove</Button>
               </div>
             </div>
             <Button onClick={() => setShowProcessing(true)} size="sm" className="h-9 gap-1.5 rounded-lg bg-primary px-4 text-primary-foreground hover:bg-primary/90">
@@ -206,7 +208,8 @@ const Studio = () => {
           {recentProjects.map(p => (
             <Card key={p.id} className="group rounded-xl border-border bg-muted/30 transition-colors duration-200 hover:border-border hover:bg-muted/60">
               <CardContent className="flex gap-4 p-3.5">
-                <div className="relative aspect-video w-28 shrink-0 overflow-hidden rounded-lg border border-border" style={{ background: `linear-gradient(135deg, hsl(${p.hue} 30% 18%), hsl(${p.hue + 40} 25% 10%))` }}>
+                <div className="relative aspect-video w-28 shrink-0 overflow-hidden rounded-lg border border-border" style={{ background: `linear-gradient(135deg, hsl(${p.hue} 70% 45%), hsl(${p.hue + 50} 65% 28%))` }}>
+                  <span className="absolute -right-3 -top-3 h-14 w-14 rounded-full bg-white/15 blur-md" aria-hidden="true" />
                   <span className="absolute inset-0 flex items-center justify-center">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors group-hover:bg-black/60">
                       <Play className="h-3 w-3 text-white/90" aria-hidden="true" />
