@@ -81,8 +81,8 @@ export function AppLayout({ children }: AppLayoutProps) {
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 transition-transform duration-200 hover:scale-105">
-                <div className="w-4 h-4 rounded-md bg-primary" />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 overflow-hidden transition-transform duration-200 hover:scale-105">
+                <img src="/uploads/image_2027_20260904_173536_2117e084.webp" alt="DreamVoice logo" className="w-9 h-9 object-contain" />
               </div>
               <span className={cn(
                 'font-semibold whitespace-nowrap overflow-hidden',

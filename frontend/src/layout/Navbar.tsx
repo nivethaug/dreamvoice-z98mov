@@ -65,8 +65,8 @@ const AppHeader = () => {
       <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-2 px-4 md:px-6">
         {/* Logo */}
         <NavLink to="/" className="mr-2 flex shrink-0 items-center gap-2" aria-label="DreamVoice home">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <AudioWaveform className="h-5 w-5 text-background" aria-hidden="true" />
+          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg">
+            <img src="/uploads/image_2027_20260904_173536_2117e084.webp" alt="DreamVoice logo" className="h-8 w-8 object-contain" />
           </span>
           <span className="text-sm font-semibold tracking-tight text-foreground">DreamVoice</span>
         </NavLink>
