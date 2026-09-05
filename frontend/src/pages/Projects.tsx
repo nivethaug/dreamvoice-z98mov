@@ -273,11 +273,13 @@ const Projects = () => {
 
                               {/* Card footer actions */}
                               <div className="mt-3 flex items-center border-t border-border/60 pt-3">
-                                {col === "Ready" && j.result?.audio_url ? (
+                                {col === "Ready" && (j.result?.video_url || j.result?.audio_url) ? (
                                   <Button asChild variant="ghost" size="sm" data-testid="projects-download"
                                     onClick={e => e.stopPropagation()}
                                     className="h-8 flex-1 justify-center gap-1.5 rounded-md px-2 text-xs font-medium text-foreground hover:bg-muted/60">
-                                    <a href={j.result.audio_url} target="_blank" rel="noreferrer" download aria-label="Download result">
+                                    <a href={j.result.video_url || j.result.audio_url} target="_blank" rel="noreferrer"
+                                      download={j.result.video_url ? `dreamvoice-${j.job_id}.mp4` : `dreamvoice-${j.job_id}.wav`}
+                                      aria-label="Download result">
                                       <Download className="h-3.5 w-3.5" aria-hidden="true" /> Download
                                     </a>
                                   </Button>
