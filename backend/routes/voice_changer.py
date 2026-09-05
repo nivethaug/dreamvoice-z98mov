@@ -471,6 +471,23 @@ async def start_conversion(
     # ---- validate target voice (server-side authorization) ----
     voice = _get_usable_voice(user, req.voice_id, db)
 
+    # ---- rate limit: 5 conversions per user per rolling 24h window ----
+    from models.job import VoiceJob as VoiceJobModel
+    day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+    try:
+        conversions_24h = (
+            db.query(VoiceJobModel)
+            .filter(VoiceJobModel.user_id == user.id, VoiceJobModel.created_at >= day_ago)
+            .count()
+        )
+    except Exception:
+        conversions_24h = 0
+    if conversions_24h >= 5:
+        raise HTTPException(
+            status_code=429,
+            detail="Daily limit reached: only 5 conversions are allowed per day. Please try again tomorrow.",
+        )
+
     # ---- publish a fresh, time-limited public URL for the reference ----
     ref_url = ""
     tmpdir = tempfile.mkdtemp(prefix="dvref_")
