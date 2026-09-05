@@ -399,11 +399,47 @@ async def list_voices(
                     and bool(v.sample_storage_key)
                 ),
                 "reference_duration": v.reference_duration_seconds,
+                "has_sample": bool(v.sample_storage_key),
                 "created_at": v.created_at.isoformat() if v.created_at else None,
             }
             for v in voices
         ]
     }
+
+
+@router.get("/voices/{voice_id}/sample")
+async def get_voice_sample(
+    voice_id: int,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    """Stream the voice's authorized reference sample for preview playback."""
+    user = _auth(authorization, db)
+    voice = (
+        db.query(Voice)
+        .filter(Voice.id == voice_id, Voice.user_id == user.id)
+        .first()
+    )
+    if not voice or not voice.sample_storage_key:
+        raise HTTPException(status_code=404, detail="Voice sample not found.")
+    data = read_media(voice.sample_storage_key)
+    if not data:
+        raise HTTPException(status_code=404, detail="Voice sample not found.")
+    ext = os.path.splitext(voice.sample_storage_key)[1].lstrip(".").lower()
+    media_types = {
+        "wav": "audio/wav",
+        "mp3": "audio/mpeg",
+        "m4a": "audio/mp4",
+        "aac": "audio/aac",
+        "ogg": "audio/ogg",
+        "flac": "audio/flac",
+        "webm": "audio/webm",
+    }
+    return Response(
+        content=data,
+        media_type=media_types.get(ext, "application/octet-stream"),
+        headers={"Cache-Control": "private, max-age=60"},
+    )
 
 
 def _get_usable_voice(user, voice_id: int, db: Session) -> Voice:

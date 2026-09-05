@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { projectStore, type ProjectMedia } from "@/lib/projectStore";
-import { startConversion, getJobStatus, cancelJob, listVoices, type BackendVoice } from "@/lib/backend";
+import { startConversion, getJobStatus, cancelJob, listVoices, fetchVoiceSample, type BackendVoice } from "@/lib/backend";
 
 const fmtTime = (s: number) => {
   if (!isFinite(s) || s < 0) s = 0;
@@ -51,7 +51,7 @@ const toVoice = (v: BackendVoice): Voice => {
     tags: (v.languages || []).join(", "), language: (v.languages || [])[0] || "Other",
     personal: true, addedAt: v.created_at ? Date.parse(v.created_at) || 0 : 0,
     initials, hue: hash,
-    authorized: v.authorized, backendId: v.voice_id,
+    authorized: v.authorized, backendId: v.voice_id, referenceUploaded: v.has_sample,
   };
 };
 
@@ -86,6 +86,46 @@ const VoiceChanger = () => {
   const [settings, setSettings] = useState({ ...DEFAULT_SETTINGS });
   const [error, setError] = useState("");
   const [toast, setToast] = useState<{ kind: "success" | "error"; msg: string } | null>(null);
+  const [previewing, setPreviewing] = useState<"original" | "target" | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
+
+  const stopPreview = () => {
+    const el = previewAudioRef.current;
+    if (el) { el.pause(); el.currentTime = 0; }
+    if (previewUrlRef.current?.startsWith("blob:")) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setPreviewing(null);
+  };
+
+  const playPreview = async (kind: "original" | "target") => {
+    const el = previewAudioRef.current;
+    if (!el) return;
+    if (previewing === kind) { stopPreview(); return; }
+    stopPreview();
+    try {
+      let url: string;
+      if (kind === "original") {
+        if (!media?.url) { setToast({ kind: "error", msg: "Upload source media first to preview the original voice." }); return; }
+        url = media.url;
+      } else {
+        if (!selectedVoice?.backendId) { setToast({ kind: "error", msg: "Select a target voice first." }); return; }
+        setPreviewing("target");
+        url = await fetchVoiceSample(selectedVoice.backendId);
+      }
+      previewUrlRef.current = url;
+      el.src = url;
+      el.onended = stopPreview;
+      el.onerror = () => { stopPreview(); setToast({ kind: "error", msg: "Preview playback failed." }); };
+      await el.play();
+      setPreviewing(kind);
+    } catch (e) {
+      stopPreview();
+      setToast({ kind: "error", msg: e instanceof Error && e.message ? e.message : "Preview unavailable." });
+    }
+  };
 
   const [progress, setProgress] = useState(0);
   const timerRef = useRef<number | null>(null);
@@ -426,8 +466,10 @@ const VoiceChanger = () => {
                   </div>
                   <Button variant="secondary" size="sm" className="gap-1.5 border border-border bg-muted/30 text-foreground hover:bg-muted/60 hover:text-foreground"
                     data-testid="voice-changer-preview-original-voice"
-                    onClick={() => setToast({ kind: "success", msg: "Playing original voice (preview)" })}>
-                    <Play className="h-3.5 w-3.5" aria-hidden="true" /> Preview
+                    onClick={() => playPreview("original")}>
+                    {previewing === "original"
+                      ? <><span aria-hidden="true">■</span> Stop</>
+                      : <><Play className="h-3.5 w-3.5" aria-hidden="true" /> Preview</>}
                   </Button>
                 </div>
               </CardContent>
@@ -440,18 +482,17 @@ const VoiceChanger = () => {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Button variant="secondary" className="gap-2 border border-border bg-muted/30 text-foreground hover:bg-muted/60 hover:text-foreground"
                     data-testid="voice-changer-compare-original"
-                    onClick={() => setToast({ kind: "success", msg: "Playing original voice" })}>
-                    ▶ Original
+                    onClick={() => playPreview("original")}>
+                    {previewing === "original" ? "■ Stop" : "▶ Original"}
                   </Button>
-                  <Button variant="secondary" disabled={!selectedVoice}
+                  <Button variant="secondary" disabled={!selectedVoice || previewing === "target"}
                     className="gap-2 bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-40"
                     data-testid="voice-changer-compare-new"
                     title={selectedVoice ? undefined : "Select a target voice first"}
-                    onClick={() => selectedVoice
-                      ? setToast({ kind: "success", msg: `Preview of ${selectedVoice.name} will play once conversion is connected.` })
-                      : setToast({ kind: "error", msg: "Preview unavailable — select a target voice first." })}>
-                    ▶ New Voice
+                    onClick={() => playPreview("target")}>
+                    {previewing === "target" ? "Loading…" : previewing === "target" ? "■ Stop" : "▶ New Voice"}
                   </Button>
+                  <audio ref={previewAudioRef} className="hidden" aria-hidden="true" />
                 </div>
               </CardContent>
             </Card>
