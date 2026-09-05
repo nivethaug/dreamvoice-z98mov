@@ -82,6 +82,7 @@ const VoiceChanger = () => {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("All");
   const [sort, setSort] = useState<Sort>("Recommended");
+  const [restoredSource, setRestoredSource] = useState<ProjectMedia | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tipsOpen, setTipsOpen] = useState(false);
   const [settings, setSettings] = useState({ ...DEFAULT_SETTINGS });
@@ -181,6 +182,13 @@ const VoiceChanger = () => {
           setResultAudioUrl(r.audio_url || null);
           setResultVideoUrl(r.video_url || null);
           setResultIsVideo(!!r.is_video || !!r.video_url);
+          if (r.source_url) {
+            // blob: URLs die on reload — stream the source from the server instead
+            setRestoredSource({
+              name: "Source media", kind: r.is_video || r.video_url ? "video" : "audio",
+              ext: "", size: 0, duration: 0, url: r.source_url, language: "",
+            });
+          }
           setPhase("complete");
         }
       } catch { /* ignore — stay in setup */ }
@@ -420,8 +428,8 @@ const VoiceChanger = () => {
               <TabsTrigger value="original" data-testid="voice-changer-tab-original">Original</TabsTrigger>
               <TabsTrigger value="new" data-testid="voice-changer-tab-new">New Voice</TabsTrigger>
             </TabsList>
-            <TabsContent value="original" className="mt-4"><MediaPlayer media={media} label="Original" mockConverted={false} /></TabsContent>
-            <TabsContent value="new" className="mt-4"><MediaPlayer media={media} label="New Voice" mockConverted src={resultUrl ?? undefined} srcKind={resultIsVideo ? "video" : "audio"} /></TabsContent>
+            <TabsContent value="original" className="mt-4"><MediaPlayer media={media || restoredSource} label="Original" mockConverted={false} /></TabsContent>
+            <TabsContent value="new" className="mt-4"><MediaPlayer media={media || restoredSource} label="New Voice" mockConverted src={resultUrl ?? undefined} srcKind={resultIsVideo ? "video" : "audio"} /></TabsContent>
           </Tabs>
 
           <Card className="border-border bg-muted/30">
@@ -459,7 +467,7 @@ const VoiceChanger = () => {
         <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
           {/* LEFT column */}
           <div className="space-y-6">
-            <MediaPlayer media={media} label="Source media" mockConverted={false} showMeta />
+            <MediaPlayer media={media || restoredSource} label="Source media" mockConverted={false} showMeta />
 
             {/* Source audio quality guidance */}
             <Card className="border-border bg-muted/30" data-testid="voice-changer-source-quality-note">

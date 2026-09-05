@@ -131,6 +131,23 @@ def download_media_file(key: str, dest: str) -> bool:
         return False
 
 
+def public_media_url(key: str) -> str:
+    """Fresh, time-limited public URL for an already-stored object."""
+    if not key or ".." in key or key.startswith("/"):
+        return ""
+    store = get_object_store()
+    if isinstance(store, S3ObjectStore):
+        try:
+            return store.signed_url(key, expires_in=TOKEN_TTL_SECONDS)
+        except Exception:
+            return ""
+    base = _public_base()
+    if not base:
+        return ""
+    fname = key.rsplit("/", 1)[-1]
+    return f"{base}/api/media/temp/{make_media_token(key)}/{fname}"
+
+
 def read_media(key: str) -> Optional[bytes]:
     """Read back a stored media object (used by the temp-serving route)."""
     store = get_object_store()

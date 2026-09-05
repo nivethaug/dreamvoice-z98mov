@@ -27,6 +27,7 @@ from services.storage.object_store import StorageError, get_object_store, make_k
 from services.storage.public_media import (
     delete_media,
     download_media_file,
+    public_media_url,
     read_media,
     store_media,
     verify_media_token,
@@ -67,6 +68,26 @@ def _auth(authorization: Optional[str], db: Session):
     return user
 
 
+def _fresh_result(res: Optional[dict], source_key: Optional[str] = None) -> Optional[dict]:
+    """Re-sign stored object keys into fresh, time-limited URLs. Stored
+    public_url values expire (~2h), so every response returning a result must
+    pass through this to keep reopened jobs playable."""
+    if not res:
+        return None
+    out = dict(res)
+    for url_field, key_field in (("audio_url", "audio_key"), ("video_url", "video_key")):
+        key = res.get(key_field)
+        if key:
+            fresh = public_media_url(key)
+            if fresh:
+                out[url_field] = fresh
+    if source_key:
+        fresh = public_media_url(source_key)
+        if fresh:
+            out["source_url"] = fresh
+    return out
+
+
 def _job_from_db(db, job_id: str, user_id):
     """Load a persisted job (post-restart fallback for job status)."""
     import json as _json
@@ -87,7 +108,7 @@ def _job_from_db(db, job_id: str, user_id):
         "progress": row.progress,
         "error": row.error,
         "user_id": row.user_id,
-        "result": meta.get("result"),
+        "result": _fresh_result(meta.get("result"), row.source_media_key),
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
     }
@@ -638,12 +659,17 @@ async def list_jobs(
             "is_video": bool(sm.get("is_video")),
             "duration_seconds": sm.get("duration_seconds"),
             "output_format": req.get("output_format"),
-            "result": {
-                "audio_url": res.get("audio_url"),
-                "video_url": res.get("video_url"),
-                "is_video": res.get("is_video"),
-                "output_format": res.get("output_format"),
-            } if res else None,
+            "result": _fresh_result(
+                {
+                    "audio_url": res.get("audio_url"),
+                    "video_url": res.get("video_url"),
+                    "audio_key": res.get("audio_key"),
+                    "video_key": res.get("video_key"),
+                    "is_video": res.get("is_video"),
+                    "output_format": res.get("output_format"),
+                },
+                sm.get("storage_key"),
+            ) if res else None,
             "created_at": j.get("created_at"),
             "updated_at": j.get("updated_at"),
         }
@@ -683,12 +709,7 @@ async def list_jobs(
             "is_video": bool(meta.get("is_video")),
             "duration_seconds": meta.get("duration_seconds"),
             "output_format": meta.get("output_format"),
-            "result": {
-                "audio_url": res.get("audio_url"),
-                "video_url": res.get("video_url"),
-                "is_video": res.get("is_video"),
-                "output_format": res.get("output_format"),
-            } if res else None,
+            "result": _fresh_result(res, row.source_media_key) if res else None,
             "created_at": row.created_at.isoformat() if row.created_at else None,
             "updated_at": row.updated_at.isoformat() if row.updated_at else None,
         })
@@ -723,7 +744,10 @@ async def get_job_status(
         "stage": job.get("stage"),
         "progress": job.get("progress"),
         "error": job.get("error"),
-        "result": job.get("result"),
+        "result": _fresh_result(
+            job.get("result"),
+            (job.get("request", {}) or {}).get("source_media", {}).get("storage_key"),
+        ),
         "created_at": job.get("created_at"),
         "updated_at": job.get("updated_at"),
     }

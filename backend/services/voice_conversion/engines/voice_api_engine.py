@@ -289,6 +289,7 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
                     )
                     created_keys.append(out["key"])
                     result["video_url"] = out["public_url"]
+                    result["video_key"] = out["key"]
                 finally:
                     va_delete(conv_va_id)
 
@@ -297,6 +298,7 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
                 )
                 created_keys.append(wav_out["key"])
                 result["audio_url"] = wav_out["public_url"]
+                result["audio_key"] = wav_out["key"]
                 result["output_format"] = "mp4"
             else:
                 ext = converted.suffix.lstrip(".").lower() or "wav"
@@ -305,6 +307,7 @@ class VoiceAPIVoiceConversionEngine(VoiceConversionEngine):
                 )
                 created_keys.append(out["key"])
                 result["audio_url"] = out["public_url"]
+                result["audio_key"] = out["key"]
                 result["output_format"] = ext
 
             result["conversion_seconds"] = round(
