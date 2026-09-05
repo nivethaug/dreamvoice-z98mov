@@ -201,8 +201,8 @@ const Projects = () => {
                           <Card key={j.job_id}
                             role="button" tabIndex={0}
                             aria-label={`Open project ${title}`}
-                            onClick={() => navigate("/voice-changer")}
-                            onKeyDown={e => (e.key === "Enter" || e.key === " ") && navigate("/voice-changer")}
+                            onClick={() => navigate(`/voice-changer?job=${j.job_id}`)}
+                            onKeyDown={e => (e.key === "Enter" || e.key === " ") && navigate(`/voice-changer?job=${j.job_id}`)}
                             className="group cursor-pointer rounded-lg border-border bg-background/50 transition-colors duration-200 outline-none hover:border-border hover:bg-background/80 focus-visible:ring-1 focus-visible:ring-ring/50"
                             data-testid="projects-card">
                             <CardContent className="p-3.5">

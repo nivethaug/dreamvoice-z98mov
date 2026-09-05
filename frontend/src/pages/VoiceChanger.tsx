@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, Play, Pause, Volume2, Maximize2, Mic2, Search, Plus, CheckCircle2,
   AlertTriangle, ChevronDown, RotateCcw, Download, Film, Music, Pencil, ArrowRight,
@@ -76,6 +76,7 @@ const VoiceChanger = () => {
   const media = projectStore.get().media as ProjectMedia | null;
   const rightsConfirmed = projectStore.get().rights.confirmed;
 
+  const [searchParams] = useSearchParams();
   const [phase, setPhase] = useState<Phase>("setup");
   const [selectedVoice, setSelectedVoice] = useState<Voice | null>(null);
   const [query, setQuery] = useState("");
@@ -162,6 +163,31 @@ const VoiceChanger = () => {
     const v = allVoices.find(x => String(x.backendId) === id);
     if (v) setSelectedVoice(v);
   }, [allVoices, voicesLoading]);
+
+  // Restore a completed job opened from the Projects page (?job=<id>)
+  useEffect(() => {
+    const jobId = searchParams.get("job");
+    if (!jobId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const st = await getJobStatus(jobId);
+        if (cancelled) return;
+        const r = st.result || {};
+        const url = r.audio_url || r.video_url || null;
+        if (st.state === "completed" && url) {
+          jobIdRef.current = jobId;
+          setResultUrl(url);
+          setResultAudioUrl(r.audio_url || null);
+          setResultVideoUrl(r.video_url || null);
+          setResultIsVideo(!!r.is_video || !!r.video_url);
+          setPhase("complete");
+        }
+      } catch { /* ignore — stay in setup */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const voices = useMemo(() => {
     let list = allVoices.filter(v =>
