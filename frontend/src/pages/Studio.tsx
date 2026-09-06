@@ -2,13 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   AudioWaveform, Mic2, Languages, FileText, Plus, Play, Clock,
-  CheckCircle2, Loader2, Upload, Film, AlertTriangle, Sparkles, ArrowRight,
-  Timer, Monitor, Volume2, RefreshCw
+  Loader2, Upload, AlertTriangle, Sparkles, ArrowRight, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { listJobs, type JobSummary } from "@/lib/backend";
 
 type ProjectStatus = "Ready" | "Processing" | "Failed";
@@ -50,22 +48,11 @@ const quickActions = [
   { title: "Transcribe", desc: "Turn speech into editable text.", cta: "Transcribe", icon: FileText },
 ];
 
-const processingSteps = [
-  { label: "Upload processed", state: "done" },
-  { label: "Speech detected", state: "done" },
-  { label: "Voice conversion", state: "done" },
-  { label: "Audio mastering", state: "active" },
-  { label: "Final video", state: "pending" },
-] as const;
-
 const sectionLabel = "mb-4 text-[15px] font-semibold text-foreground";
 
 const Studio = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState(67);
-  const [showProcessing, setShowProcessing] = useState(false);
-  const [file] = useState({ name: "dreamagent-demo.mp4", duration: "04:32", res: "1080p", audio: "48 kHz", size: "68.4 MB" });
   const [recent, setRecent] = useState<JobSummary[]>([]);
   const [recentLoading, setRecentLoading] = useState(true);
   const [recentError, setRecentError] = useState<string | null>(null);
@@ -91,12 +78,6 @@ const Studio = () => {
     const t = setTimeout(() => setLoading(false), 600);
     return () => clearTimeout(t);
   }, []);
-
-  useEffect(() => {
-    if (!showProcessing) return;
-    const i = setInterval(() => setProgress(p => Math.min(100, p + 1)), 400);
-    return () => clearInterval(i);
-  }, [showProcessing]);
 
   if (loading) {
     return (
@@ -155,74 +136,31 @@ const Studio = () => {
         </div>
       </section>
 
-      {/* Upload workspace preview */}
-      <section aria-labelledby="upload-heading">
+      {/* Create voice project */}
+      <section aria-labelledby="upload-heading" data-da-source="src/pages/Studio.tsx:CreateVoiceProject">
         <h2 id="upload-heading" className={sectionLabel}>Create Voice Project</h2>
-        {!showProcessing ? (
-          <div className="space-y-4">
-            <div
-              role="button" tabIndex={0} aria-label="Upload media: drag and drop or browse files"
-              className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-indigo-400/25 bg-indigo-500/[0.05] px-6 py-10 text-center transition-colors hover:border-indigo-400/45 hover:bg-indigo-500/[0.09]"
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-indigo-400/30 bg-indigo-500/15 text-indigo-300">
-                <Upload className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <p className="text-sm font-medium text-foreground">Drop your video or audio here</p>
-              <p className="text-xs text-muted-foreground">MP4 · MOV · MP3 · WAV · M4A</p>
-              <Button variant="outline" size="sm" className="h-8 rounded-lg border-border bg-transparent text-foreground hover:bg-muted/60 hover:text-foreground">
-                Browse Files
-              </Button>
-              <p className="text-xs text-muted-foreground">Video up to 500 MB · Audio up to 100 MB · Max 30 minutes</p>
-            </div>
-            <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-3.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground">
-                  <Film className="h-4 w-4" aria-hidden="true" />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Timer className="h-3 w-3" aria-hidden="true" />{file.duration}</span>
-                    <span className="flex items-center gap-1"><Monitor className="h-3 w-3" aria-hidden="true" />{file.res}</span>
-                    <span className="flex items-center gap-1"><Volume2 className="h-3 w-3" aria-hidden="true" />{file.audio}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="hidden text-xs tabular-nums text-muted-foreground sm:block">{file.size}</span>
-                <Button variant="outline" size="sm" className="h-8 rounded-lg border-border bg-transparent text-foreground hover:bg-muted/60 hover:text-foreground">Replace</Button>
-                <Button size="sm" className="h-8 rounded-lg border border-red-500/30 bg-red-500/15 text-red-400 hover:bg-red-500/25 hover:text-red-300">Remove</Button>
-              </div>
-            </div>
-            <Button onClick={() => setShowProcessing(true)} size="sm" className="h-9 gap-1.5 rounded-lg bg-primary px-4 text-primary-foreground hover:bg-primary/90">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Generate Voice
+        <div className="space-y-4">
+          <div
+            role="button" tabIndex={0} aria-label="Upload media: drag and drop or browse files"
+            data-testid="studio-upload-dropzone"
+            onClick={() => navigate("/projects")}
+            onKeyDown={e => (e.key === "Enter" || e.key === " ") && navigate("/projects")}
+            className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-indigo-400/25 bg-indigo-500/[0.05] px-6 py-10 text-center transition-colors hover:border-indigo-400/45 hover:bg-indigo-500/[0.09]"
+          >
+            <span className="flex h-12 w-12 items-center justify-center rounded-full border border-indigo-400/30 bg-indigo-500/15 text-indigo-300">
+              <Upload className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <p className="text-sm font-medium text-foreground">Drop your video or audio here</p>
+            <p className="text-xs text-muted-foreground">MP4 · MOV · MP3 · WAV · M4A</p>
+            <Button variant="outline" size="sm" className="h-8 rounded-lg border-border bg-transparent text-foreground hover:bg-muted/60 hover:text-foreground">
+              Browse Files
             </Button>
+            <p className="text-xs text-muted-foreground">Video up to 500 MB · Audio up to 100 MB · Max 30 minutes</p>
           </div>
-        ) : (
-          <Card className="rounded-xl border-border bg-muted/30">
-            <CardContent className="space-y-5 p-5" role="status" aria-live="polite">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Creating your new voice track</h3>
-                <div className="mt-3 flex items-center gap-3">
-                  <Progress value={progress} className="h-1.5 flex-1" />
-                  <span className="text-xs tabular-nums text-muted-foreground">{progress}%</span>
-                </div>
-              </div>
-              <ul className="space-y-2">
-                {processingSteps.map(s => (
-                  <li key={s.label} className="flex items-center gap-2.5 text-sm">
-                    {s.state === "done" && <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />}
-                    {s.state === "active" && <Loader2 className="h-4 w-4 animate-spin text-amber-600 dark:text-amber-400" aria-hidden="true" />}
-                    {s.state === "pending" && <span className="h-4 w-4 rounded-full border border-border" aria-hidden="true" />}
-                    <span className={s.state === "pending" ? "text-muted-foreground" : "text-foreground"}>{s.label}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs text-muted-foreground">Keep this window open while your voice track is being prepared.</p>
-              <Button variant="ghost" size="sm" onClick={() => { setShowProcessing(false); setProgress(67); }} className="text-muted-foreground hover:text-red-600 dark:text-red-400">Cancel</Button>
-            </CardContent>
-          </Card>
-        )}
+          <Button onClick={() => navigate("/projects")} data-testid="studio-generate-voice-button" size="sm" className="h-9 gap-1.5 rounded-lg bg-primary px-4 text-primary-foreground hover:bg-primary/90">
+            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Generate Voice
+          </Button>
+        </div>
       </section>
 
       {/* Recent projects */}
