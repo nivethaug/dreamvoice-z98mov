@@ -300,17 +300,18 @@ async def create_voice(
             status_code=400,
             detail="Voice Rights & Responsibility confirmation is required.",
         )
-    # Rate limit: one voice creation per user per rolling 24h window.
+    # Rate limit: up to 15 voice creations per user per rolling 24h window.
+    VOICE_CREATE_DAILY_LIMIT = 15
     day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
     recent_count = (
         db.query(Voice)
         .filter(Voice.user_id == user.id, Voice.created_at >= day_ago)
         .count()
     )
-    if recent_count >= 1:
+    if recent_count >= VOICE_CREATE_DAILY_LIMIT:
         raise HTTPException(
             status_code=429,
-            detail="Daily limit reached: only one voice can be created per day. Please try again tomorrow.",
+            detail=f"Daily limit reached: only {VOICE_CREATE_DAILY_LIMIT} voices can be created per day. Please try again tomorrow.",
         )
     voice = Voice(
         user_id=user.id,
