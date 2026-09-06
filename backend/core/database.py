@@ -37,6 +37,7 @@ def init_db():
     migrations = (
         "ALTER TABLE voices ADD COLUMN IF NOT EXISTS rights_confirmed_at TIMESTAMPTZ",
         "ALTER TABLE voices ADD COLUMN IF NOT EXISTS reference_duration_seconds INTEGER",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE",
     )
     try:
         with engine.begin() as conn:

@@ -300,25 +300,27 @@ async def create_voice(
             status_code=400,
             detail="Voice Rights & Responsibility confirmation is required.",
         )
-    # Rate limit: up to 15 voice creations per user per rolling 24h window.
-    VOICE_CREATE_DAILY_LIMIT = 15
-    day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
-    # Only count voices that actually completed creation (have a reference
-    # sample). Abandoned/failed attempts must not burn the user's quota.
-    recent_count = (
-        db.query(Voice)
-        .filter(
-            Voice.user_id == user.id,
-            Voice.created_at >= day_ago,
-            Voice.sample_storage_key.isnot(None),
+    # Rate limit: 1 voice creation per user per rolling 24h window.
+    # Admin users have no restriction.
+    if not getattr(user, "is_admin", False):
+        VOICE_CREATE_DAILY_LIMIT = 1
+        day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+        # Only count voices that actually completed creation (have a reference
+        # sample). Abandoned/failed attempts must not burn the user's quota.
+        recent_count = (
+            db.query(Voice)
+            .filter(
+                Voice.user_id == user.id,
+                Voice.created_at >= day_ago,
+                Voice.sample_storage_key.isnot(None),
+            )
+            .count()
         )
-        .count()
-    )
-    if recent_count >= VOICE_CREATE_DAILY_LIMIT:
-        raise HTTPException(
-            status_code=429,
-            detail=f"Daily limit reached: only {VOICE_CREATE_DAILY_LIMIT} voices can be created per day. Please try again tomorrow.",
-        )
+        if recent_count >= VOICE_CREATE_DAILY_LIMIT:
+            raise HTTPException(
+                status_code=429,
+                detail="Daily limit reached: only 1 voice can be created per day. Please try again tomorrow.",
+            )
     voice = Voice(
         user_id=user.id,
         name=req.name,
@@ -655,27 +657,29 @@ async def start_conversion(
     # ---- validate target voice (server-side authorization) ----
     voice = _get_usable_voice(user, req.voice_id, db)
 
-    # ---- rate limit: 5 conversions per user per rolling 24h window ----
-    from models.job import VoiceJob as VoiceJobModel
-    day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
-    try:
-        conversions_24h = (
-            db.query(VoiceJobModel)
-            .filter(
-                VoiceJobModel.user_id == user.id,
-                VoiceJobModel.created_at >= day_ago,
-                # placeholder "upload" rows are not conversions
-                VoiceJobModel.id.notlike("upload-%"),
+    # ---- rate limit: 1 conversion per user per rolling 24h window ----
+    # Admin users have no restriction.
+    if not getattr(user, "is_admin", False):
+        from models.job import VoiceJob as VoiceJobModel
+        day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+        try:
+            conversions_24h = (
+                db.query(VoiceJobModel)
+                .filter(
+                    VoiceJobModel.user_id == user.id,
+                    VoiceJobModel.created_at >= day_ago,
+                    # placeholder "upload" rows are not conversions
+                    VoiceJobModel.id.notlike("upload-%"),
+                )
+                .count()
             )
-            .count()
-        )
-    except Exception:
-        conversions_24h = 0
-    if conversions_24h >= 5:
-        raise HTTPException(
-            status_code=429,
-            detail="Daily limit reached: only 5 conversions are allowed per day. Please try again tomorrow.",
-        )
+        except Exception:
+            conversions_24h = 0
+        if conversions_24h >= 1:
+            raise HTTPException(
+                status_code=429,
+                detail="Daily limit reached: only 1 conversion is allowed per day. Please try again tomorrow.",
+            )
 
     # ---- publish a fresh, time-limited public URL for the reference ----
     ref_url = ""
