@@ -176,7 +176,8 @@ const VoiceChanger = () => {
         const st = await getJobStatus(jobId);
         if (cancelled) return;
         const r = st.result || {};
-        const url = r.audio_url || r.video_url || null;
+        const isVid = !!r.is_video || !!r.video_url;
+        const url = isVid ? (r.video_url || r.audio_url) : (r.audio_url || r.video_url) || null;
         if (st.state === "completed" && url) {
           jobIdRef.current = jobId;
           setResultUrl(url);
@@ -250,7 +251,8 @@ const VoiceChanger = () => {
           if (st.state === "completed") {
             stopPolling();
             const r = st.result || {};
-            const url = r.audio_url || r.video_url || null;
+            const isVid = !!r.is_video || !!r.video_url;
+            const url = isVid ? (r.video_url || r.audio_url) : (r.audio_url || r.video_url) || null;
             if (!url) {
               setPhase("setup");
               setError("Conversion finished but no output was produced. Please try again.");
@@ -260,7 +262,7 @@ const VoiceChanger = () => {
             setResultUrl(url);
             setResultAudioUrl(r.audio_url || null);
             setResultVideoUrl(r.video_url || null);
-            setResultIsVideo(!!r.is_video || !!r.video_url);
+            setResultIsVideo(isVid);
             setPhase("complete");
             setToast({ kind: "success", msg: "Voice conversion complete" });
           } else if (st.state === "failed") {
