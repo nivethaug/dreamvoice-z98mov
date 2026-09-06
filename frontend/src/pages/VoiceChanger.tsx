@@ -207,6 +207,11 @@ const VoiceChanger = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Single safe source-of-truth: an existing project restores via restoredSource
+  // while `media` stays null — never read `media` fields directly.
+  const sourceMedia = media || restoredSource;
+  const mediaLanguage = media?.language || restoredSource?.language || "—";
+
   const voices = useMemo(() => {
     let list = allVoices.filter(v =>
       v.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -446,8 +451,8 @@ const VoiceChanger = () => {
           <Card className="border-border bg-muted/30">
             <CardContent className="grid gap-4 p-5 sm:grid-cols-3">
               <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Voice</p><p className="mt-1 text-sm font-medium text-foreground">{selectedVoice?.name || "Restored voice"}</p></div>
-              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Duration</p><p className="mt-1 text-sm font-medium text-foreground">{fmtTime((media || restoredSource)!.duration)}</p></div>
-              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Language</p><p className="mt-1 text-sm font-medium text-foreground">{media!.language || "—"}</p></div>
+              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Duration</p><p className="mt-1 text-sm font-medium text-foreground">{fmtTime(sourceMedia?.duration ?? 0)}</p></div>
+              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Language</p><p className="mt-1 text-sm font-medium text-foreground">{mediaLanguage}</p></div>
             </CardContent>
           </Card>
 
@@ -507,7 +512,7 @@ const VoiceChanger = () => {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground">Original Voice</p>
                     <p className="text-xs text-muted-foreground">Detected speaker</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{media!.language || "—"} · {fmtTime((media || restoredSource)!.duration)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{mediaLanguage} · {fmtTime(sourceMedia?.duration ?? 0)}</p>
                   </div>
                   <Button variant="secondary" size="sm" className="gap-1.5 border border-border bg-muted/30 text-foreground hover:bg-muted/60 hover:text-foreground"
                     data-testid="voice-changer-preview-original-voice"
@@ -778,17 +783,17 @@ const VoiceChanger = () => {
 
 /** Reusable media player card (works for both source and converted output). */
 const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
-  media: ProjectMedia; label: string; mockConverted: boolean; showMeta?: boolean;
+  media: ProjectMedia | null; label: string; mockConverted: boolean; showMeta?: boolean;
   src?: string; srcKind?: "video" | "audio";
 }) => {
   const ref = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
-  const [duration, setDuration] = useState(media.duration);
+  const [duration, setDuration] = useState(media?.duration ?? 0);
   const [volume, setVolume] = useState(1);
-  const playUrl = src ?? media.url;
-  const playKind = srcKind ?? media.kind;
+  const playUrl = src ?? media?.url ?? "";
+  const playKind = srcKind ?? media?.kind ?? "audio";
 
   const toggle = () => {
     const el = ref.current;
@@ -803,11 +808,11 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
     <Card className="border-border bg-muted/30" data-testid={`voice-changer-media-${label.toLowerCase().replace(/\s+/g, "-")}`}>
       <CardContent className="space-y-4 p-4">
         {playKind === "video" ? (
-          <video ref={ref} src={playUrl} poster={playKind === "video" ? media.thumbnail : undefined}
+          <video ref={ref} src={playUrl} poster={playKind === "video" ? media?.thumbnail : undefined}
             className="aspect-video w-full rounded-lg bg-black"
             aria-label={`${label} video preview`}
             onTimeUpdate={e => setTime(e.currentTarget.currentTime)}
-            onLoadedMetadata={e => setDuration(e.currentTarget.duration || media.duration)}
+            onLoadedMetadata={e => setDuration(e.currentTarget.duration || media?.duration || 0)}
             onEnded={() => setPlaying(false)} />
         ) : (
           <div ref={containerRef} className="relative overflow-hidden rounded-lg border border-border bg-muted/30 p-4">
@@ -820,7 +825,7 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
             </div>
             <audio ref={ref} src={playUrl} aria-label={`${label} audio preview`}
               onTimeUpdate={e => setTime(e.currentTarget.currentTime)}
-              onLoadedMetadata={e => setDuration(e.currentTarget.duration || media.duration)}
+              onLoadedMetadata={e => setDuration(e.currentTarget.duration || media?.duration || 0)}
               onEnded={() => setPlaying(false)} className="hidden" />
           </div>
         )}
@@ -851,9 +856,9 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
 
         {showMeta && (
           <div className="grid gap-2 rounded-lg border border-border bg-muted/30 p-3 text-xs sm:grid-cols-3">
-            <div><span className="text-muted-foreground">Original file: </span><span className="truncate text-foreground">{media.name}</span></div>
-            <div><span className="text-muted-foreground">Duration: </span><span className="text-foreground">{fmtTime(media.duration)}</span></div>
-            <div><span className="text-muted-foreground">Language: </span><span className="text-foreground">{media!.language || "—"}</span></div>
+            <div><span className="text-muted-foreground">Original file: </span><span className="truncate text-foreground">{media?.name || "—"}</span></div>
+            <div><span className="text-muted-foreground">Duration: </span><span className="text-foreground">{fmtTime(media?.duration ?? 0)}</span></div>
+            <div><span className="text-muted-foreground">Language: </span><span className="text-foreground">{media?.language || "—"}</span></div>
           </div>
         )}
       </CardContent>
