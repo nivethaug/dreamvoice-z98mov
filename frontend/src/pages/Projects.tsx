@@ -196,7 +196,7 @@ const Projects = () => {
                         const thumb = j.result?.video_url || (col === "Ready" ? j.result?.audio_url : undefined);
                         const isVideoThumb = !!j.result?.video_url;
                         const hue = (j.job_id.charCodeAt(0) * 37 + j.job_id.length * 13) % 360;
-                        const title = j.voice_name || "Conversion";
+                        const title = j.voice_name || j.filename || "Conversion";
                         return (
                           <Card key={j.job_id}
                             role="button" tabIndex={0}

@@ -374,6 +374,14 @@ def mark_interrupted_jobs() -> int:
             for row in rows:
                 if row.id in job_manager._jobs:  # live again (shouldn't happen)
                     continue
+                if (row.id or "").startswith("upload-"):
+                    # Placeholder from an unfinished upload: it can never be
+                    # converted after a restart — tell the user clearly.
+                    row.status = "failed"
+                    row.error = ("Upload wasn't finished before the server "
+                                 "restarted. Please re-upload the file.")
+                    n += 1
+                    continue
                 row.status = "failed"
                 row.error = ("The conversion was interrupted by a server "
                              "restart. Please start it again.")

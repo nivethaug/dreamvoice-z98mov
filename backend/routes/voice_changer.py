@@ -234,6 +234,37 @@ async def upload_source_media(
     # of uploading the same (potentially large) file a second time.
     remember_source(key, va_file_id, duration)
 
+    # Register a placeholder "processing" job row so an upload is never lost:
+    # if the user reloads before starting the conversion, the file still shows
+    # up under Processing in Projects. The real conversion deletes this row.
+    try:
+        import json as _json
+        import uuid as _uuid
+
+        from models.job import VoiceJob as VoiceJobModel
+
+        user = _auth(authorization, db)
+        row = VoiceJobModel(
+            id=f"upload-{_uuid.uuid4().hex[:16]}",
+            user_id=user.id,
+            source_media_key=key,
+            source_language=(getattr(user, "preferred_language", None) or "en"),
+            status="processing",
+            stage="upload",
+            progress=5.0,
+            result_metadata=_json.dumps({
+                "placeholder": True,
+                "filename": name,
+                "is_video": ext in VIDEO_EXT,
+                "duration_seconds": round(duration, 2),
+            }),
+        )
+        db.add(row)
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.warning("placeholder job row failed", exc_info=True)
+
     return {
         "media_id": key,
         "storage_key": key,
@@ -623,7 +654,12 @@ async def start_conversion(
     try:
         conversions_24h = (
             db.query(VoiceJobModel)
-            .filter(VoiceJobModel.user_id == user.id, VoiceJobModel.created_at >= day_ago)
+            .filter(
+                VoiceJobModel.user_id == user.id,
+                VoiceJobModel.created_at >= day_ago,
+                # placeholder "upload" rows are not conversions
+                VoiceJobModel.id.notlike("upload-%"),
+            )
             .count()
         )
     except Exception:
@@ -654,6 +690,18 @@ async def start_conversion(
     # Durations were measured by the Voice API at upload time (server-side
     # ffprobe). If metadata is missing, ask the Voice API — never probe locally.
     src_meta = store.metadata(req.media_id) or {}
+
+    # A real conversion is starting for this file — drop any placeholder
+    # "processing" row registered at upload time (it would duplicate this job).
+    try:
+        db.query(VoiceJobModel).filter(
+            VoiceJobModel.user_id == user.id,
+            VoiceJobModel.source_media_key == req.media_id,
+            VoiceJobModel.id.like("upload-%"),
+        ).delete(synchronize_session=False)
+        db.commit()
+    except Exception:
+        db.rollback()
     src_duration = float(src_meta.get("duration_seconds") or src_meta.get("duration") or 0)
     if src_duration <= 0:
         pending = peek_source(req.media_id)
@@ -795,6 +843,7 @@ async def list_jobs(
             "voice_name": meta.get("voice_name"),
             "voice_id": row.target_voice_id,
             "language": row.source_language,
+            "filename": meta.get("filename"),
             "is_video": bool(meta.get("is_video")),
             "duration_seconds": meta.get("duration_seconds"),
             "output_format": meta.get("output_format"),
