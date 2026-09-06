@@ -453,6 +453,70 @@ async def list_voices(
     }
 
 
+class VoiceUpdateRequest(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    description: Optional[str] = None
+    languages: Optional[list] = None
+
+
+def _owned_voice(db: Session, voice_id: int, user) -> Voice:
+    voice = db.query(Voice).filter(Voice.id == voice_id).first()
+    if not voice or int(voice.user_id) != int(user.id):
+        raise HTTPException(status_code=404, detail="Voice not found")
+    return voice
+
+
+@router.patch("/voices/{voice_id}")
+async def update_voice(
+    voice_id: int,
+    req: VoiceUpdateRequest,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    """Rename a voice and/or update its description and languages."""
+    user = _auth(authorization, db)
+    voice = _owned_voice(db, voice_id, user)
+    if req.name is not None:
+        voice.name = req.name.strip() or voice.name
+    if req.description is not None:
+        voice.description = req.description
+    if req.languages is not None:
+        voice.languages = ",".join(req.languages or ["ta"])
+    db.commit()
+    db.refresh(voice)
+    return {
+        "voice_id": voice.id,
+        "name": voice.name,
+        "description": voice.description or "",
+        "languages": (voice.languages or "ta").split(","),
+    }
+
+
+@router.delete("/voices/{voice_id}")
+async def delete_voice(
+    voice_id: int,
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    """Delete a voice and its stored reference sample."""
+    from models.voice import VoiceSample
+    from services.storage.object_store import get_object_store
+
+    user = _auth(authorization, db)
+    voice = _owned_voice(db, voice_id, user)
+    if voice.sample_storage_key:
+        try:
+            get_object_store().delete(voice.sample_storage_key)
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "Failed to delete sample object %s", voice.sample_storage_key
+            )
+    db.query(VoiceSample).filter(VoiceSample.voice_id == voice.id).delete()
+    db.delete(voice)
+    db.commit()
+    return {"deleted": True, "voice_id": voice_id}
+
+
 @router.get("/voices/{voice_id}/sample")
 async def get_voice_sample(
     voice_id: int,
