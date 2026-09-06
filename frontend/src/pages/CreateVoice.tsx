@@ -7,6 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { LANGUAGES as ALL_LANGUAGES, mapLanguage } from "@/lib/languages";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +20,7 @@ const AUDIO_EXTS = ["wav", "mp3", "m4a"];
 const MAX_SIZE = 100 * 1024 * 1024;
 const MAX_DURATION = 600;
 
-const LANGUAGES = ["Tamil", "English", "Hindi", "Telugu", "Malayalam", "Kannada", "Other"];
+// Top 50 world languages (Tamil included) — stored as ISO codes
 const CATEGORIES = ["Personal", "Professional", "Narrator", "Character", "Other"];
 const STEPS = ["Upload Sample", "Review", "Create Voice"];
 
@@ -51,9 +52,10 @@ const CreateVoice = () => {
   const [toast, setToast] = useState<{ kind: "success" | "error"; msg: string } | null>(null);
   const [sample, setSample] = useState<Sample | null>(null);
 
-  const [name, setName] = useState("My Voice");
+  const [name, setName] = useState("");
   const [desc, setDesc] = useState("Personal voice for YouTube videos");
-  const [langs, setLangs] = useState<string[]>(["Tamil", "English"]);
+  const [langs, setLangs] = useState<string[]>(["ta", "en"]);
+  const [langQuery, setLangQuery] = useState("");
   const [category, setCategory] = useState("Personal");
   const [rightsOk, setRightsOk] = useState(false);
 
@@ -396,18 +398,28 @@ const CreateVoice = () => {
                 </div>
                 <fieldset className="space-y-2">
                   <legend className="text-sm text-foreground">Languages</legend>
-                  <div className="flex flex-wrap gap-2" role="group" aria-label="Voice languages" data-testid="create-voice-languages">
-                    {LANGUAGES.map(l => {
-                      const on = langs.includes(l);
-                      return (
-                        <button key={l} type="button" aria-pressed={on} data-testid={`create-voice-lang-${l.toLowerCase()}`}
-                          onClick={() => setLangs(ls => (on ? ls.filter(x => x !== l) : [...ls, l]))}
-                          className={`rounded-full border px-3 py-1 text-xs ${on ? "border-primary/60 bg-primary/15 text-primary" : "border-border bg-muted/30 text-muted-foreground hover:text-foreground"}`}>
-                          {l}
-                        </button>
-                      );
-                    })}
+                  <label htmlFor="language-search" className="sr-only">Search languages</label>
+                  <input id="language-search" aria-label="Search languages" data-testid="create-voice-language-search"
+                    value={langQuery} onChange={e => setLangQuery(e.target.value)}
+                    placeholder="Search 50 languages…"
+                    className="h-9 w-full rounded-lg border border-border bg-muted/30 px-3 text-sm text-foreground outline-none focus:border-primary/50" />
+                  <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2">
+                    <div className="flex flex-wrap gap-2" role="group" aria-label="Voice languages" data-testid="create-voice-languages">
+                      {ALL_LANGUAGES.filter(l => !langQuery.trim() || l.name.toLowerCase().includes(langQuery.trim().toLowerCase()) || l.code === langQuery.trim().toLowerCase()).map(l => {
+                        const on = langs.includes(l.code);
+                        return (
+                          <button key={l.code} type="button" aria-pressed={on} data-testid={`create-voice-lang-${l.code}`}
+                            onClick={() => setLangs(ls => (on ? ls.filter(x => x !== l.code) : [...ls, l.code]))}
+                            className={`rounded-full border px-3 py-1 text-xs ${on ? "border-primary/60 bg-primary/15 text-primary" : "border-border bg-muted/30 text-muted-foreground hover:text-foreground"}`}>
+                            {l.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+                  {langs.length > 0 && (
+                    <p className="text-xs text-muted-foreground" aria-live="polite">Selected: {langs.map(mapLanguage).join(", ")}</p>
+                  )}
                 </fieldset>
                 <div className="space-y-2">
                   <Label htmlFor="voice-category" className="text-foreground">Voice Category</Label>

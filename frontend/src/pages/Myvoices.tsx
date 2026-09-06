@@ -3,10 +3,14 @@ import { useNavigate } from "react-router-dom";
 import {
   Mic2, Library, Plus, ShieldCheck, Search, Play, Square, CheckCircle2,
   AlertTriangle, Loader2, X, RefreshCw, Calendar, Globe, Tag, MoreVertical,
+  Pencil, Trash2, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { deleteVoice, renameVoice } from "@/lib/backend";
+import { mapLanguage } from "@/lib/languages";
 import { Input } from "@/components/ui/input";
 import { listVoices, fetchVoiceSampleUrl, type BackendVoice } from "@/lib/backend";
 
@@ -128,6 +132,46 @@ const Myvoices = () => {
     navigate("/voice-changer");
   };
 
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  const startRename = (v: BackendVoice) => {
+    setRenamingId(v.voice_id);
+    setRenameValue(v.name);
+  };
+
+  const saveRename = async (v: BackendVoice) => {
+    const name = renameValue.trim();
+    if (!name) return;
+    setBusyId(v.voice_id);
+    try {
+      await renameVoice(v.voice_id, name);
+      setRenamingId(null);
+      setToast({ kind: "success", msg: "Voice renamed" });
+      await load();
+    } catch (e: any) {
+      setToast({ kind: "error", msg: e?.message || "Could not rename voice" });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const removeVoice = async (v: BackendVoice) => {
+    if (!window.confirm(`Delete voice "${v.name}"? This cannot be undone.`)) return;
+    setBusyId(v.voice_id);
+    try {
+      await deleteVoice(v.voice_id);
+      if (playingId === v.voice_id) stopPreview();
+      setToast({ kind: "success", msg: `"${v.name}" deleted` });
+      await load();
+    } catch (e: any) {
+      setToast({ kind: "error", msg: e?.message || "Could not delete voice" });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center" aria-live="polite">
@@ -230,11 +274,33 @@ const Myvoices = () => {
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="truncate text-[15px] font-semibold text-foreground">{v.name}</h3>
+                    {renamingId === v.voice_id ? (
+                      <span className="flex items-center gap-1.5">
+                        <input
+                          aria-label="Voice name" data-testid={`my-voices-rename-input-${v.voice_id}`}
+                          value={renameValue} autoFocus
+                          onChange={e => setRenameValue(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter") saveRename(v); if (e.key === "Escape") setRenamingId(null); }}
+                          className="h-8 w-44 rounded-lg border border-primary/50 bg-muted/30 px-2 text-sm text-foreground outline-none"
+                        />
+                        <button type="button" aria-label="Save name" data-testid={`my-voices-rename-save-${v.voice_id}`}
+                          onClick={() => saveRename(v)} disabled={busyId === v.voice_id}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white hover:bg-primary/90">
+                          {busyId === v.voice_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+                        </button>
+                        <button type="button" aria-label="Cancel rename"
+                          onClick={() => setRenamingId(null)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/40 hover:text-foreground">
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                      </span>
+                    ) : (
+                      <h3 className="truncate text-[15px] font-semibold text-foreground">{v.name}</h3>
+                    )}
                     <Badge variant="outline" className="rounded-full border-primary/30 bg-primary/10 px-2 py-0 text-[10px] font-medium normal-case text-primary">Personal</Badge>
                   </div>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {(v.languages || []).length > 0 ? v.languages.join(" • ") : v.voice_type}
+                    {(v.languages || []).length > 0 ? v.languages.map(mapLanguage).join(" • ") : v.voice_type}
                   </p>
                   {v.description && <p className="mt-1 truncate text-xs text-muted-foreground/80">{v.description}</p>}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -291,7 +357,7 @@ const Myvoices = () => {
                 <div className="flex items-center gap-2 text-xs">
                   <Globe className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                   <span className="text-muted-foreground">Language</span>
-                  <span className="ml-auto pl-4 text-foreground">{(v.languages || []).join(", ") || "—"}</span>
+                  <span className="ml-auto pl-4 text-foreground">{(v.languages || []).map(mapLanguage).join(", ") || "—"}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <Tag className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
@@ -300,11 +366,26 @@ const Myvoices = () => {
                 </div>
               </div>
               {/* Overflow menu */}
-              <button type="button" aria-label={`More options for ${v.name}`}
-                data-testid={`my-voices-more-${v.voice_id}`}
-                className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <MoreVertical className="h-4 w-4" aria-hidden="true" />
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" aria-label={`More options for ${v.name}`}
+                    data-testid={`my-voices-more-${v.voice_id}`}
+                    className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <MoreVertical className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="border-border bg-card">
+                  <DropdownMenuItem data-testid={`my-voices-rename-${v.voice_id}`}
+                    onSelect={() => startRename(v)} className="gap-2 text-foreground focus:bg-muted/40">
+                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem data-testid={`my-voices-delete-${v.voice_id}`}
+                    onSelect={() => removeVoice(v)} disabled={busyId === v.voice_id}
+                    className="gap-2 text-red-500 focus:bg-red-500/10 focus:text-red-500">
+                    {busyId === v.voice_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />} Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           ))}
           </div>

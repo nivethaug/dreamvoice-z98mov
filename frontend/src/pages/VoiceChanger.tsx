@@ -5,6 +5,7 @@ import {
   AlertTriangle, ChevronDown, RotateCcw, Download, Film, Music, Pencil, ArrowRight,
   Loader2, X, SlidersHorizontal, Info,
 } from "lucide-react";
+import { mapLanguage } from "@/lib/languages";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -48,7 +49,7 @@ const toVoice = (v: BackendVoice): Voice => {
   const initials = v.name.trim().split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "V";
   return {
     id, name: v.name, desc: v.description || "",
-    tags: (v.languages || []).join(", "), language: (v.languages || [])[0] || "Other",
+    tags: (v.languages || []).map(mapLanguage).join(", "), language: (v.languages || []).map(mapLanguage)[0] || "Other",
     personal: true, addedAt: v.created_at ? Date.parse(v.created_at) || 0 : 0,
     initials, hue: hash,
     authorized: v.authorized, backendId: v.voice_id, referenceUploaded: v.has_sample,
@@ -122,8 +123,13 @@ const VoiceChanger = () => {
       el.src = url;
       el.onended = stopPreview;
       el.onerror = () => { stopPreview(); setToast({ kind: "error", msg: "Preview playback failed." }); };
-      await el.play();
+      // Flip to playing immediately — awaiting play() can stall/reject and
+      // leave the UI stuck on a toast (same bug as the My Voices preview).
       setPreviewing(kind);
+      el.play().catch(() => {
+        stopPreview();
+        setToast({ kind: "error", msg: "Preview playback failed. Please try again." });
+      });
     } catch (e) {
       stopPreview();
       setToast({ kind: "error", msg: e instanceof Error && e.message ? e.message : "Preview unavailable." });
