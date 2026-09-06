@@ -836,7 +836,38 @@ async def list_jobs(
         )
     except Exception:
         rows = []
+    out.sort(key=lambda j: j.get("created_at") or "", reverse=True)
+
+    # ---- purge stale placeholder "upload-" rows whose source already has a
+    # real conversion job (they would otherwise show the source as stuck in
+    # Processing forever after the conversion completed) ----
+    real_source_keys = set()
+    for j in jobs:  # in-memory (authoritative for running/recent jobs)
+        sm = (j.get("request", {}) or {}).get("source_media", {}) or {}
+        if sm.get("storage_key"):
+            real_source_keys.add(sm["storage_key"])
+    for row in rows:  # persisted history (covers restarts)
+        if not (row.id or "").startswith("upload-") and row.source_media_key:
+            real_source_keys.add(row.source_media_key)
+
+    stale_placeholder_ids = []
+    filtered = []
+    for item in out:
+        if str(item["job_id"]).startswith("upload-"):
+            # placeholder: resolve its source key from the in-memory record
+            src_key = None
+            for j in jobs:
+                if j.get("job_id") == item["job_id"]:
+                    src_key = ((j.get("request", {}) or {}).get("source_media", {}) or {}).get("storage_key")
+                    break
+            if src_key and src_key in real_source_keys:
+                stale_placeholder_ids.append(item["job_id"])
+                continue
+        filtered.append(item)
     for row in rows:
+        if (row.id or "").startswith("upload-") and row.source_media_key in real_source_keys:
+            stale_placeholder_ids.append(row.id)
+            continue
         if row.id in seen:
             continue
         try:
@@ -844,7 +875,7 @@ async def list_jobs(
         except Exception:
             meta = {}
         res = meta.get("result") or {}
-        out.append({
+        filtered.append({
             "job_id": row.id,
             "status": row.status,
             "state": row.status,
@@ -862,6 +893,15 @@ async def list_jobs(
             "created_at": row.created_at.isoformat() if row.created_at else None,
             "updated_at": row.updated_at.isoformat() if row.updated_at else None,
         })
+    if stale_placeholder_ids:
+        try:
+            db.query(VoiceJobModel).filter(
+                VoiceJobModel.id.in_(stale_placeholder_ids)
+            ).delete(synchronize_session=False)
+            db.commit()
+        except Exception:
+            db.rollback()
+    out = filtered
     out.sort(key=lambda j: j.get("created_at") or "", reverse=True)
     return {"jobs": out}
 
