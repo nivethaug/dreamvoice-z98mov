@@ -563,7 +563,7 @@ const CreateVoice = () => {
               <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
                 <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" aria-hidden="true" />
                 <p className="font-medium text-red-700 dark:text-red-300">Voice creation failed</p>
-                <p className="text-sm text-muted-foreground">Something went wrong while creating your voice. Please try again.</p>
+                <p className="text-sm text-muted-foreground">{backendError || "Something went wrong while creating your voice. Please try again."}</p>
                 <Button onClick={startCreate} className="bg-primary text-primary-foreground hover:bg-primary">Try Again</Button>
               </CardContent>
             </Card>

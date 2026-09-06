@@ -303,9 +303,15 @@ async def create_voice(
     # Rate limit: up to 15 voice creations per user per rolling 24h window.
     VOICE_CREATE_DAILY_LIMIT = 15
     day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+    # Only count voices that actually completed creation (have a reference
+    # sample). Abandoned/failed attempts must not burn the user's quota.
     recent_count = (
         db.query(Voice)
-        .filter(Voice.user_id == user.id, Voice.created_at >= day_ago)
+        .filter(
+            Voice.user_id == user.id,
+            Voice.created_at >= day_ago,
+            Voice.sample_storage_key.isnot(None),
+        )
         .count()
     )
     if recent_count >= VOICE_CREATE_DAILY_LIMIT:
