@@ -68,6 +68,20 @@ def _auth(authorization: Optional[str], db: Session):
     return user
 
 
+def _key_from_url(url: str) -> str:
+    """Recover the storage key from a signed temp-media URL. Old results
+    stored only the URL (which expires); the key segment is still valid —
+    re-signing it issues a fresh token signed with our own secret."""
+    try:
+        path = url.split("/api/media/temp/", 1)[1]
+        token = path.split("/", 1)[0].split("?")[0]
+        key_b64 = token.split(":")[0]
+        import base64 as _b64
+        return _b64.urlsafe_b64decode(key_b64 + "=" * (-len(key_b64) % 4)).decode()
+    except Exception:
+        return ""
+
+
 def _fresh_result(res: Optional[dict], source_key: Optional[str] = None) -> Optional[dict]:
     """Re-sign stored object keys into fresh, time-limited URLs. Stored
     public_url values expire (~2h), so every response returning a result must
@@ -77,6 +91,8 @@ def _fresh_result(res: Optional[dict], source_key: Optional[str] = None) -> Opti
     out = dict(res)
     for url_field, key_field in (("audio_url", "audio_key"), ("video_url", "video_key")):
         key = res.get(key_field)
+        if not key and res.get(url_field):
+            key = _key_from_url(res[url_field])
         if key:
             fresh = public_media_url(key)
             if fresh:
@@ -91,15 +107,24 @@ def _fresh_result(res: Optional[dict], source_key: Optional[str] = None) -> Opti
 def _job_from_db(db, job_id: str, user_id):
     """Load a persisted job (post-restart fallback for job status)."""
     import json as _json
+    from models.job import VoiceJob as VoiceJobModel
     try:
         row = db.query(VoiceJobModel).filter(VoiceJobModel.id == job_id).first()
-    except Exception:
+    except Exception as _e:
+        import traceback
+        traceback.print_exc()
+        print(f"[job_from_db] query failed: {_e}", flush=True)
         return None
-    if not row or (row.user_id and row.user_id != user_id):
+    if not row:
+        print(f"[job_from_db] no row for {job_id}", flush=True)
+        return None
+    if row.user_id and int(row.user_id) != int(user_id):
+        print(f"[job_from_db] owner mismatch: row={row.user_id} user={user_id}", flush=True)
         return None
     try:
         meta = _json.loads(row.result_metadata or "{}")
-    except Exception:
+    except Exception as _e:
+        print(f"[job_from_db] metadata parse failed: {_e}", flush=True)
         meta = {}
     return {
         "job_id": row.id,
@@ -735,7 +760,7 @@ async def get_job_status(
         if job is None:
             raise HTTPException(status_code=404, detail="Job not found.")
     owner = job.get("user_id") or job.get("request", {}).get("user_id")
-    if owner and owner != user.id:
+    if owner and int(owner) != int(user.id):
         raise HTTPException(status_code=404, detail="Job not found.")
     return {
         "job_id": job["job_id"],
@@ -765,7 +790,7 @@ async def cancel_job(
     except Exception:
         raise HTTPException(status_code=404, detail="Job not found.")
     owner = job.get("user_id") or job.get("request", {}).get("user_id")
-    if owner and owner != user.id:
+    if owner and int(owner) != int(user.id):
         raise HTTPException(status_code=404, detail="Job not found.")
     try:
         result = await job_manager.cancel_job(job_id)
@@ -842,7 +867,7 @@ async def delete_job(
     rec = job_manager._jobs.get(job_id)
     if rec is not None:
         owner = rec.get("user_id") or (rec.get("request", {}) or {}).get("user_id")
-        if owner and owner != user.id:
+        if owner and int(owner) != int(user.id):
             raise HTTPException(status_code=404, detail="Job not found.")
         req = rec.get("request", {}) or {}
         sm = req.get("source_media", {}) or {}

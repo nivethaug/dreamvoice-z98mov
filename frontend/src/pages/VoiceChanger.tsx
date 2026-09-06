@@ -21,7 +21,7 @@ const fmtTime = (s: number) => {
 interface Voice {
   id: string; name: string; desc: string; tags: string; language: string;
   personal?: boolean; addedAt: number; initials: string; hue: number;
-  authorized?: boolean; backendId?: number;
+  authorized?: boolean; backendId?: number; referenceUploaded?: boolean;
 }
 
 // Voice library loaded from the backend API (real voices only)
@@ -83,6 +83,7 @@ const VoiceChanger = () => {
   const [filter, setFilter] = useState<Filter>("All");
   const [sort, setSort] = useState<Sort>("Recommended");
   const [restoredSource, setRestoredSource] = useState<ProjectMedia | null>(null);
+  const [restored, setRestored] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tipsOpen, setTipsOpen] = useState(false);
   const [settings, setSettings] = useState({ ...DEFAULT_SETTINGS });
@@ -336,7 +337,7 @@ const VoiceChanger = () => {
       </header>
 
       {/* No media state */}
-      {!media && phase !== "processing" && (
+      {!media && !restoredSource && phase !== "processing" && (
         <Card className="border-red-500/25 bg-red-500/[0.04]" data-testid="voice-changer-no-media">
           <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
             <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" aria-hidden="true" />
@@ -402,7 +403,7 @@ const VoiceChanger = () => {
       )}
 
       {/* COMPLETED STATE */}
-      {phase === "complete" && media && selectedVoice && (
+      {phase === "complete" && (media || restoredSource) && (
         <section data-testid="voice-changer-complete" className="space-y-6">
           <Card className="border-emerald-500/25 bg-emerald-500/[0.04]">
             <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
@@ -428,15 +429,15 @@ const VoiceChanger = () => {
               <TabsTrigger value="original" data-testid="voice-changer-tab-original">Original</TabsTrigger>
               <TabsTrigger value="new" data-testid="voice-changer-tab-new">New Voice</TabsTrigger>
             </TabsList>
-            <TabsContent value="original" className="mt-4"><MediaPlayer media={media || restoredSource} label="Original" mockConverted={false} /></TabsContent>
+            <TabsContent value="original" className="mt-4"><MediaPlayer media={media || restoredSource} label="Original" mockConverted={false} src={(media || restoredSource)?.url} srcKind={(media || restoredSource)?.kind === "video" ? "video" : "audio"} /></TabsContent>
             <TabsContent value="new" className="mt-4"><MediaPlayer media={media || restoredSource} label="New Voice" mockConverted src={resultUrl ?? undefined} srcKind={resultIsVideo ? "video" : "audio"} /></TabsContent>
           </Tabs>
 
           <Card className="border-border bg-muted/30">
             <CardContent className="grid gap-4 p-5 sm:grid-cols-3">
-              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Voice</p><p className="mt-1 text-sm font-medium text-foreground">{selectedVoice.name}</p></div>
-              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Duration</p><p className="mt-1 text-sm font-medium text-foreground">{fmtTime(media.duration)}</p></div>
-              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Language</p><p className="mt-1 text-sm font-medium text-foreground">{media.language}</p></div>
+              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Voice</p><p className="mt-1 text-sm font-medium text-foreground">{selectedVoice?.name || "Restored voice"}</p></div>
+              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Duration</p><p className="mt-1 text-sm font-medium text-foreground">{fmtTime((media || restoredSource)!.duration)}</p></div>
+              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Language</p><p className="mt-1 text-sm font-medium text-foreground">{(media || restoredSource)!.language || "—"}</p></div>
             </CardContent>
           </Card>
 
@@ -496,7 +497,7 @@ const VoiceChanger = () => {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground">Original Voice</p>
                     <p className="text-xs text-muted-foreground">Detected speaker</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{media.language} · {fmtTime(media.duration)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{(media || restoredSource)!.language || "—"} · {fmtTime((media || restoredSource)!.duration)}</p>
                   </div>
                   <Button variant="secondary" size="sm" className="gap-1.5 border border-border bg-muted/30 text-foreground hover:bg-muted/60 hover:text-foreground"
                     data-testid="voice-changer-preview-original-voice"
@@ -524,7 +525,7 @@ const VoiceChanger = () => {
                     data-testid="voice-changer-compare-new"
                     title={selectedVoice ? undefined : "Select a target voice first"}
                     onClick={() => playPreview("target")}>
-                    {previewing === "target" ? "Loading…" : previewing === "target" ? "■ Stop" : "▶ New Voice"}
+                    {previewing === "target" ? "■ Stop" : "▶ New Voice"}
                   </Button>
                   <audio ref={previewAudioRef} className="hidden" aria-hidden="true" />
                 </div>
@@ -814,8 +815,8 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
         {showMeta && (
           <div className="grid gap-2 rounded-lg border border-border bg-muted/30 p-3 text-xs sm:grid-cols-3">
             <div><span className="text-muted-foreground">Original file: </span><span className="truncate text-foreground">{media.name}</span></div>
-            <div><span className="text-muted-foreground">Duration: </span><span className="text-foreground">{fmtTime(media.duration)}</span></div>
-            <div><span className="text-muted-foreground">Language: </span><span className="text-foreground">{media.language}</span></div>
+            <div><span className="text-muted-foreground">Duration: </span><span className="text-foreground">{fmtTime((media || restoredSource)!.duration)}</span></div>
+            <div><span className="text-muted-foreground">Language: </span><span className="text-foreground">{(media || restoredSource)!.language || "—"}</span></div>
           </div>
         )}
       </CardContent>
