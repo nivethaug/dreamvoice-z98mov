@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, Play, Pause, Volume2, Maximize2, Mic2, Search, Plus, CheckCircle2,
   AlertTriangle, ChevronDown, RotateCcw, Download, Film, Music, Pencil, ArrowRight,
-  Loader2, X, SlidersHorizontal, Info,
+  Loader2, X, SlidersHorizontal, Info, StopCircle,
 } from "lucide-react";
 import { mapLanguage } from "@/lib/languages";
 import { Button } from "@/components/ui/button";
@@ -91,8 +91,10 @@ const VoiceChanger = () => {
   const [error, setError] = useState("");
   const [toast, setToast] = useState<{ kind: "success" | "error"; msg: string } | null>(null);
   const [previewing, setPreviewing] = useState<"original" | "target" | null>(null);
+  const [cardPreviewId, setCardPreviewId] = useState<string | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  const cardAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const stopPreview = () => {
     const el = previewAudioRef.current;
@@ -630,8 +632,35 @@ const VoiceChanger = () => {
                         <div className="mt-2.5 flex justify-end gap-2">
                           <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
                             data-testid={`voice-changer-preview-${v.id}`}
-                            onClick={() => setToast({ kind: "success", msg: `Previewing ${v.name}` })}>
-                            <Play className="h-3 w-3" aria-hidden="true" /> Preview
+                            aria-label={`Preview ${v.name}`}
+                            onClick={async () => {
+                              if (cardPreviewId === v.id) {
+                                if (cardAudioRef.current) { cardAudioRef.current.pause(); cardAudioRef.current = null; }
+                                setCardPreviewId(null);
+                                return;
+                              }
+                              if (!v.backendId) {
+                                setToast({ kind: "error", msg: `${v.name} has no voice sample yet.` });
+                                return;
+                              }
+                              if (cardAudioRef.current) { cardAudioRef.current.pause(); cardAudioRef.current = null; }
+                              setCardPreviewId(v.id);
+                              try {
+                                const url = await fetchVoiceSample(v.backendId);
+                                const audio = new Audio(url);
+                                cardAudioRef.current = audio;
+                                audio.onended = () => setCardPreviewId(null);
+                                audio.onerror = () => { setCardPreviewId(null); setToast({ kind: "error", msg: "Could not play this sample." }); };
+                                await audio.play().catch(() => { setCardPreviewId(null); setToast({ kind: "error", msg: "Playback was blocked. Try again." }); });
+                              } catch {
+                                setCardPreviewId(null);
+                                setToast({ kind: "error", msg: "Could not load the voice sample." });
+                              }
+                            }}>
+                            {cardPreviewId === v.id
+                              ? <StopCircle className="h-3 w-3 text-primary" aria-hidden="true" />
+                              : <Play className="h-3 w-3" aria-hidden="true" />}
+                            {cardPreviewId === v.id ? "Stop" : "Preview"}
                           </Button>
                           <Button size="sm"
                             className={`h-7 gap-1 px-3 text-xs ${selected ? "bg-primary text-primary-foreground hover:bg-primary" : "border border-border bg-muted/30 text-foreground hover:bg-muted/60"}`}
