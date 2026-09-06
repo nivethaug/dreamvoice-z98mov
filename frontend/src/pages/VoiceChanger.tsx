@@ -466,7 +466,7 @@ const VoiceChanger = () => {
       )}
 
       {/* SETUP: two-column workspace */}
-      {media && phase === "setup" && (
+      {(media || restoredSource) && phase === "setup" && (
         <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
           {/* LEFT column */}
           <div className="space-y-6">
