@@ -439,7 +439,7 @@ const VoiceChanger = () => {
             <CardContent className="grid gap-4 p-5 sm:grid-cols-3">
               <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Voice</p><p className="mt-1 text-sm font-medium text-foreground">{selectedVoice?.name || "Restored voice"}</p></div>
               <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Duration</p><p className="mt-1 text-sm font-medium text-foreground">{fmtTime((media || restoredSource)!.duration)}</p></div>
-              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Language</p><p className="mt-1 text-sm font-medium text-foreground">{(media || restoredSource)!.language || "—"}</p></div>
+              <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Language</p><p className="mt-1 text-sm font-medium text-foreground">{media!.language || "—"}</p></div>
             </CardContent>
           </Card>
 
@@ -499,7 +499,7 @@ const VoiceChanger = () => {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground">Original Voice</p>
                     <p className="text-xs text-muted-foreground">Detected speaker</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{(media || restoredSource)!.language || "—"} · {fmtTime((media || restoredSource)!.duration)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{media!.language || "—"} · {fmtTime((media || restoredSource)!.duration)}</p>
                   </div>
                   <Button variant="secondary" size="sm" className="gap-1.5 border border-border bg-muted/30 text-foreground hover:bg-muted/60 hover:text-foreground"
                     data-testid="voice-changer-preview-original-voice"
@@ -817,8 +817,8 @@ const MediaPlayer = ({ media, label, mockConverted, showMeta, src, srcKind }: {
         {showMeta && (
           <div className="grid gap-2 rounded-lg border border-border bg-muted/30 p-3 text-xs sm:grid-cols-3">
             <div><span className="text-muted-foreground">Original file: </span><span className="truncate text-foreground">{media.name}</span></div>
-            <div><span className="text-muted-foreground">Duration: </span><span className="text-foreground">{fmtTime((media || restoredSource)!.duration)}</span></div>
-            <div><span className="text-muted-foreground">Language: </span><span className="text-foreground">{(media || restoredSource)!.language || "—"}</span></div>
+            <div><span className="text-muted-foreground">Duration: </span><span className="text-foreground">{fmtTime(media.duration)}</span></div>
+            <div><span className="text-muted-foreground">Language: </span><span className="text-foreground">{media!.language || "—"}</span></div>
           </div>
         )}
       </CardContent>

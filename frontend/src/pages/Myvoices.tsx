@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Mic2, Library, Plus, ShieldCheck, Search, Play, CheckCircle2,
+  Mic2, Library, Plus, ShieldCheck, Search, Play, Square, CheckCircle2,
   AlertTriangle, Loader2, X, RefreshCw, Calendar, Globe, Tag, MoreVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { listVoices, type BackendVoice } from "@/lib/backend";
+import { listVoices, fetchVoiceSampleUrl, type BackendVoice } from "@/lib/backend";
 
 type Sort = "Recently Added" | "Name";
 
@@ -36,6 +36,57 @@ const Myvoices = () => {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("Recently Added");
   const [toast, setToast] = useState<{ kind: "success" | "error"; msg: string } | null>(null);
+  const [playingId, setPlayingId] = useState<number | null>(null);
+  const [loadingSampleId, setLoadingSampleId] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
+  const stopPreview = useCallback(() => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    setPlayingId(null);
+  }, []);
+
+  useEffect(() => () => {
+    audioRef.current?.pause();
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+  }, []);
+
+  const togglePreview = useCallback(async (v: BackendVoice) => {
+    if (playingId === v.voice_id) {
+      stopPreview();
+      return;
+    }
+    stopPreview();
+    if (!v.has_sample) {
+      setToast({ kind: "error", msg: `"${v.name}" has no voice sample yet.` });
+      return;
+    }
+    setLoadingSampleId(v.voice_id);
+    try {
+      const url = await fetchVoiceSampleUrl(v.voice_id);
+      objectUrlRef.current = url;
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = stopPreview;
+      audio.onerror = stopPreview;
+      setPlayingId(v.voice_id); // flip UI immediately; play() resolves async
+      try {
+        await audio.play();
+      } catch (playErr: any) {
+        setPlayingId(null);
+        setToast({ kind: "error", msg: playErr?.message || "Could not play voice sample" });
+      }
+    } catch (e: any) {
+      setToast({ kind: "error", msg: e?.message || "Could not play voice sample" });
+    } finally {
+      setLoadingSampleId(null);
+    }
+  }, [playingId, stopPreview]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -211,8 +262,14 @@ const Myvoices = () => {
                     aria-label={`Preview ${v.name}`}
                     data-testid={`my-voices-play-${v.voice_id}`}
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/25 transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    onClick={() => useVoice(v)}>
-                    <Play className="ml-0.5 h-4 w-4 fill-current" aria-hidden="true" />
+                    onClick={() => togglePreview(v)}>
+                    {loadingSampleId === v.voice_id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : playingId === v.voice_id ? (
+                      <Square className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+                    ) : (
+                      <Play className="ml-0.5 h-4 w-4 fill-current" aria-hidden="true" />
+                    )}
                   </button>
                   <div className="flex h-12 w-32 items-center gap-[3px] text-muted-foreground/70 md:w-36 lg:w-56" aria-hidden="true">
                     {waveBarsFor(v.voice_id).map((h, i) => (
