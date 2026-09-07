@@ -12,7 +12,9 @@ import {
 import { useTheme, type Theme } from "@/hooks/use-theme";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { getToken, logout } from "@/lib/backend";
+import { useEffect, useState } from "react";
+import { ShieldCheck } from "lucide-react";
+import { getToken, getCurrentUser, logout } from "@/lib/backend";
 
 const getUserEmail = (): string => {
   try {
@@ -48,6 +50,12 @@ const AppHeader = () => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    getCurrentUser().then((u) => { if (alive && u?.is_admin) setIsAdmin(true); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
   const email = getUserEmail();
   const initials =
     (email ? String(email) : "DV")
@@ -78,6 +86,11 @@ const AppHeader = () => {
               {l.label}
             </NavLink>
           ))}
+          {isAdmin && (
+            <NavLink to="/admin" data-testid="navbar-link-admin" className={navLinkCls}>
+              <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4" aria-hidden="true" /> Admin</span>
+            </NavLink>
+          )}
           {soonLinks.map((l) => (
             <span
               key={l.label}

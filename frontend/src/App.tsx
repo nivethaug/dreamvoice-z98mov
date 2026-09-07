@@ -10,6 +10,7 @@ import Myvoices from "./pages/Myvoices";
 import CreateVoice from "./pages/CreateVoice";
 import Projects from "./pages/Projects";
 import Settings from "./pages/Settings";
+import Admin from "./pages/Admin";
 import NewProject from "./pages/NewProject";
 import VoiceChanger from "./pages/VoiceChanger";
 import Publish from "./pages/Publish";
@@ -67,6 +68,7 @@ const App = () => (
               <Route path="/voices/create" element={<RequireAuth><CreateVoice /></RequireAuth>} />
               <Route path="/projects" element={<RequireAuth><Projects /></RequireAuth>} />
               <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+              <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

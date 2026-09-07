@@ -15,6 +15,7 @@ from routes.health import router as health_router
 from routes.auth import router as auth_router
 from routes.voice_conversion import router as voice_conversion_router
 from routes.ai import router as ai_router
+from routes.admin import router as admin_router
 from routes.voice_changer import router as voice_changer_router
 from routes.voice_changer import temp_media_router
 from services.voice_conversion import job_manager as voice_job_manager  # noqa: F401
@@ -72,6 +73,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health_router)
+app.include_router(admin_router)
 app.include_router(auth_router)
 app.include_router(voice_conversion_router)
 app.include_router(ai_router)

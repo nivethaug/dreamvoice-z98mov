@@ -26,6 +26,7 @@ class RegisterRequest(BaseModel):
 class UserResponse(BaseModel):
     id: int
     email: str
+    is_admin: bool = False
 
 
 class TokenResponse(BaseModel):
@@ -78,4 +79,4 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
     
-    return {"id": user.id, "email": user.email}
+    return {"id": user.id, "email": user.email, "is_admin": bool(user.is_admin)}

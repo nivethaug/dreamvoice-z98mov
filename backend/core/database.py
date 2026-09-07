@@ -38,6 +38,8 @@ def init_db():
         "ALTER TABLE voices ADD COLUMN IF NOT EXISTS rights_confirmed_at TIMESTAMPTZ",
         "ALTER TABLE voices ADD COLUMN IF NOT EXISTS reference_duration_seconds INTEGER",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE",
+        "UPDATE users SET is_admin = TRUE WHERE id = (SELECT MIN(id) FROM users)",
+        "UPDATE users SET is_admin = TRUE WHERE email LIKE '%@dreamagent.cloud'",
     )
     try:
         with engine.begin() as conn:
